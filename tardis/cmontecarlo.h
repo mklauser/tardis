@@ -30,8 +30,8 @@ typedef struct RPacket
   double mu; /**< Cosine of the angle of the packet. */
   double energy; /**< Energy of the packet in erg. */
   double r; /**< Distance from center in cm. */
-  double tau_event;
-  double nu_line;
+  double tau_event; /**< Optical depth to next event. */
+  double nu_line; /**< frequency of the last line. */
   int64_t current_shell_id; /**< ID of the current shell. */
   int64_t next_line_id; /**< The index of the next line that the packet will encounter. */
   /**
@@ -58,10 +58,10 @@ typedef struct RPacket
    */
   int64_t virtual_packet_flag;
   int64_t virtual_packet;
-  double d_inner;
-  double d_outer;
-  double d_line;
-  double d_electron;
+  double d_inner; /**< Distance to the inner shell boundary. */
+  double d_outer; /**< Distance to the outer shell boundary. */
+  double d_line; /**< Distance to the next possible line event. */
+  double d_electron; /**< Distance to the next electron scatter event. */
   int64_t moved;
   double d_boundary; /**< Distance to shell boundary. */
   int64_t next_shell_id; /**< ID of the next shell packet visits. */
