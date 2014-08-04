@@ -49,6 +49,8 @@ inline int64_t binary_search(double *x, double x_insert, int64_t imin, int64_t i
   return imin;
 }
 
+
+
 inline double rpacket_doppler_factor(rpacket_t *packet, storage_model_t *storage)
 {
   return 1.0 - packet->mu * packet->r * storage->inverse_time_explosion * INVERSE_C;
@@ -156,6 +158,81 @@ inline double compute_distance2electron(rpacket_t *packet, storage_model_t *stor
   return packet->tau_event * inverse_ne;
 }
 
+
+
+inline double compute_distance2continuum(rpacket_t *packet, storage_model_t *storage)
+{
+    double chi_bf;
+    double chi_th;
+    double chi_ff;
+    double chi_cont;
+    double T;
+
+
+    if (packet->virtual_packet > 0)
+        {
+        packet->d_bf = MISS_DISTANCE;
+        packet->d_th = MISS_DISTANCE;
+        packet->d_ff = MISS_DISTANCE;
+        packet->chi_cont = MISS_DISTANCE;
+        packet->chi_bf = 0;
+        packet->chi_th = 0;
+        packet->chi_ff = 0;
+        packet->chi_cont = MISS_DISTANCE;
+
+        return MISS_DISTANCE;
+        }
+
+    packet->chi_bf = calculate_chi_bf(packet, storage);
+    chi_ff = 0;
+    packet->d_bf = packet->tau_event / packet->chi_bf;
+    packet->chi_th = storage->electron_densities[packet->current_shell_id] / storage->sigma_thomson;
+    packet->d_th = packet->tau_event / packet->chi_th;
+    packet->d_ff = 0;
+    packet->chi_ff = chi_ff;
+    packet->chi_cont = packet->chi_th + packet->chi_ff + packet->chi_bf;
+    packet->d_cont = packet->tau_event / packet->chi_cont;
+
+    return packet->d_cont;
+}
+
+inline double calculate_chi_bf(rpacket_t *packet, storage_model_t *storage)
+{
+    int64_t n;
+    double chi_bf;
+    double bf_helper = 0;
+    double nu_th;
+    double l_pop_r;
+    double l_pop;
+    double T;
+    double kB;
+    double nu;
+    int64_t i;
+    int64_t I;
+    int64_t atom;
+    int64_t ion;
+    int64_t level;
+
+    nu = packet->nu;
+    T = storage->t_electron[packet->current_shell_id];
+    kB = storage->kB;
+    I = sizeof(storage->chi_bf_index_to_level)/sizeof(storage->chi_bf_index_to_level[0]);
+
+    for(i=1;i<=n;++i){
+        nu_th = storage->bound_free_th_frequency[i];
+        if (nu_th < nu){
+            atom = storage->chi_bf_index_to_level[i][0];
+            ion = storage->chi_bf_index_to_level[i][1];
+            level = storage->chi_bf_index_to_level[i][2];
+            l_pop = storage->bf_level_populations[i][packet->current_shell_id];
+            l_pop_r = storage->bf_lpopulation_ratio_nlte_lte[i][packet->current_shell_id ];
+            bf_helper += storage->bf_cross_sections[i] * l_pop * (nu_th/nu)**3 * (1-l_pop_r * exp(-(H * nu)/KB /T));
+        }
+    }
+    return bf_helper;
+}
+
+
 inline int64_t macro_atom(rpacket_t *packet, storage_model_t *storage)
 {
   int emit, i = 0;
@@ -175,6 +252,7 @@ inline int64_t macro_atom(rpacket_t *packet, storage_model_t *storage)
     }
   return storage->transition_line_id[i];
 }
+
 
 inline double move_packet(rpacket_t *packet, storage_model_t *storage, 
 			  double distance, int64_t virtual_packet)
@@ -256,6 +334,7 @@ void init_storage_model(storage_model_t *storage,
   storage->no_of_lines = no_of_lines;
   storage->no_of_packets = no_of_packets;
   storage->current_packet_id = -1;
+  storage->chi_bf_index_to_level;
 }
 
 int64_t montecarlo_one_packet(storage_model_t *storage, rpacket_t *packet, int64_t virtual_mode)

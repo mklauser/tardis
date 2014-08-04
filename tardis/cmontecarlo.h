@@ -65,6 +65,15 @@ typedef struct RPacket
   int64_t moved;
   double d_boundary; /**< Distance to shell boundary. */
   int64_t next_shell_id; /**< ID of the next shell packet visits. */
+  double chi_bf;
+  double chi_th;
+  double chi_ff;
+  double chi_cont;
+  double d_bf;
+  double d_th;
+  double d_ff;
+  double d_cont;
+
 } rpacket_t;
 
 typedef struct StorageModel
@@ -112,6 +121,13 @@ typedef struct StorageModel
   double inner_boundary_albedo;
   int64_t reflective_inner_boundary;
   int64_t current_packet_id;
+  double *chi_bf_index_to_level;
+  double *bound_free_th_frequency;
+  double *bf_lpopulation_ratio_nlte;
+  double *bf_lpopulation_ratio;
+  double *t_electron;
+  double kB;
+
 } storage_model_t;
 
 typedef int64_t (*montecarlo_event_handler_t)(rpacket_t *packet, storage_model_t *storage,
@@ -182,6 +198,11 @@ inline double compute_distance2line(rpacket_t *packet, storage_model_t *storage)
  *
  * @return distance to the Thomson scatter event in centimeters
  */
+inline double compute_distance2continuum(rpacket_t *packet, storage_model_t *storage);
+
+inline double calculate_chi_bf(rpacket_t *packet, storage_model_t *storage);
+
+
 inline double compute_distance2electron(rpacket_t *packet, storage_model_t *storage);
 
 inline int64_t macro_atom(rpacket_t *packet, storage_model_t *storage);

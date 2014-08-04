@@ -81,6 +81,12 @@ ctypedef struct storage_model_t:
     double inner_boundary_albedo
     int_type_t reflective_inner_boundary
     int_type_t current_packet_id
+    double *chi_bf_index_to_level
+    double *bound_free_th_frequency
+    double *bf_lpopulation_ratio_nlte
+    double *bf_lpopulation_ratio
+    double *t_electron
+    double kB
 
 
 cdef extern int_type_t line_search(double *nu, double nu_insert, int_type_t number_of_lines) except -1
