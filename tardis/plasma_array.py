@@ -809,7 +809,6 @@ class BasePlasmaArray(object):
 
         bf_dataf = self.atom_data.levels.join(self.atom_data.ion_cx_th)
         bf_dataf['cross_section'] = bf_dataf['cross_section'].fillna(0) # add factor here to increase the cross section. For debugging
-        ipdb.set_trace()
 
         level_populations = self.level_populations.__array__()
 
@@ -849,7 +848,6 @@ class BasePlasmaArray(object):
         #for computing chi in the mc part
 
 
-        ipdb.set_trace()
         filter_mask = bound_free_cross_section_at_threshold.__array__()[:] > 1e-35
 
         self.bf_level_populations = np.array(self.level_populations.__array__()[filter_mask, :])

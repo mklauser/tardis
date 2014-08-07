@@ -173,7 +173,9 @@ def montecarlo_radial1d(model, int_type_t virtual_packet_flag=0):
                     np.ndarray[int_type_t, ndim=1] line2level,
                     int_type_t log_packets,
                     int_type_t do_scatter
+
     """
+    print("Start montecarlo_radial1d")
     cdef storage_model_t storage
     cdef rpacket_t packet
     rk_seed(model.tardis_config.montecarlo.seed, &mt_state)
@@ -270,17 +272,17 @@ def montecarlo_radial1d(model, int_type_t virtual_packet_flag=0):
     storage.inner_boundary_albedo = model.tardis_config.montecarlo.inner_boundary_albedo
     storage.current_packet_id = -1
 
-    cdef np.ndarray[int_type_t, ndim=2, mode='c'] bf_index_to_level = model.plasma_array.chi_bf_index_to_level
+    cdef np.ndarray[int_type_t, ndim=2, mode='c'] bf_index_to_level =np.ascontiguousarray(model.plasma_array.chi_bf_index_to_level)
     storage.chi_bf_index_to_level = <int_type_t*> bf_index_to_level.data
     storage.chi_bf_index_to_level_nrow = bf_index_to_level.shape[0]
     storage.chi_bf_index_to_level_ncolum = bf_index_to_level.shape[1]
 
-    cdef np.ndarray[double, ndim=2, mode='c'] bf_level_populations = model.plasma_array.bf_level_populations
+    cdef np.ndarray[double, ndim=2, mode='c'] bf_level_populations = np.ascontiguousarray(model.plasma_array.bf_level_populations)
     storage.bf_level_population = <double*> bf_level_populations.data
     storage.bf_level_population_nrow = bf_level_populations.shape[0]
     storage.bf_level_population_ncolum = bf_level_populations.shape[1]
 
-    cdef np.ndarray[double, ndim=2, mode='c'] bf_lpopulation_ratio_nlte_lte = model.plasma_array.bf_lpopulation_ratio_nlte_lte
+    cdef np.ndarray[double, ndim=2, mode='c'] bf_lpopulation_ratio_nlte_lte = np.ascontiguousarray(model.plasma_array.bf_lpopulation_ratio_nlte_lte)
     storage.bf_lpopulation_ratio_nlte_lte = <double*> bf_lpopulation_ratio_nlte_lte.data
     storage.bf_lpopulation_ratio_nlte_lte_nrow = bf_lpopulation_ratio_nlte_lte.shape[0]
     storage.bf_lpopulation_ratio_nlte_lte_ncolum = bf_lpopulation_ratio_nlte_lte.shape[1]
@@ -316,6 +318,9 @@ def montecarlo_radial1d(model, int_type_t virtual_packet_flag=0):
     cdef int_type_t reabsorbed = 0
     cdef int_type_t recently_crossed_boundary = 0
     cdef int i = 0
+
+    print("start with packet loop")
+
     for i in range(storage.no_of_packets):
         storage.current_packet_id = i
         #setting up the properties of the packet
