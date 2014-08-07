@@ -12,7 +12,7 @@ import yaml
 import tardis
 from tardis.io.model_reader import read_density_file, \
     calculate_density_after_time, read_abundances_file
-from tardis.io.config_validator import Config
+from tardis.io.config_validator import ConfigurationValidator
 from tardis import atomic
 from tardis.util import species_string_to_tuple, parse_quantity, \
     element_symbol2atomic_number
@@ -389,8 +389,7 @@ def parse_density_section(density_dict, v_inner, v_outer, time_explosion):
     #Parse density uniform
     def parse_uniform(density_dict, v_inner, v_outer, time_explosion):
         no_of_shells = len(v_inner)
-        return parse_quantity(density_dict['value']).to('g cm^-3') * \
-               np.ones(no_of_shells)
+        return density_dict['value'].to('g cm^-3') * np.ones(no_of_shells)
 
     density_parser['uniform'] = parse_uniform
 
@@ -649,7 +648,7 @@ class ConfigurationNameSpace(dict):
     __setattr__ = __setitem__
 
     def __dir__(self):
-        self.keys()
+        return self.keys()
 
     def get_config_item(self, config_item_string):
         """
@@ -737,7 +736,7 @@ class Configuration(ConfigurationNameSpace):
 
     @classmethod
     def from_config_dict(cls, config_dict, atom_data=None, test_parser=False,
-                         config_definition_file=None):
+                         config_definition_file=None, validate=True):
         """
         Validating and subsequently parsing a config file.
 
@@ -760,6 +759,9 @@ class Configuration(ConfigurationNameSpace):
             path to config definition file, if `None` will be set to the default
             in the `data` directory that ships with TARDIS
 
+        validate: ~bool
+            Turn validation on or off.
+
 
         Returns
         -------
@@ -772,9 +774,11 @@ class Configuration(ConfigurationNameSpace):
             config_definition_file = default_config_definition_file
 
         config_definition = yaml.load(open(config_definition_file))
-
-        validated_config_dict = Config(config_definition,
+        if validate:
+            validated_config_dict = ConfigurationValidator(config_definition,
                                        config_dict).get_config()
+        else:
+            validated_config_dict = config_dict
 
         #First let's see if we can find an atom_db anywhere:
         if test_parser:
@@ -908,6 +912,8 @@ class Configuration(ConfigurationNameSpace):
             logger.info('"initial_t_inner" is not specified in the plasma '
                         'section - initializing to %s with given luminosity',
                         plasma_section['t_inner'])
+        else:
+            plasma_section['t_inner'] = plasma_section['initial_t_inner']
 
         plasma_section['t_rads'] = np.ones(no_of_shells) * \
                                    plasma_section['initial_t_rad']

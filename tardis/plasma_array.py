@@ -12,6 +12,7 @@ from tardis import macro_atom, io
 from tardis.io.util import parse_abundance_dict_to_dataframe
 import  ipdb
 
+
 logger = logging.getLogger(__name__)
 
 k_B_cgs = constants.k_B.cgs.value
@@ -582,6 +583,7 @@ class BasePlasmaArray(object):
             collision_matrix = self.atom_data.nlte_data.get_collision_matrix(species, self.t_electrons) * \
                                self.electron_densities.values
 
+
             rates_matrix = r_lu_matrix + r_ul_matrix + collision_matrix
 
             for i in xrange(number_of_levels):
@@ -629,6 +631,7 @@ class BasePlasmaArray(object):
         g_lower = self.atom_data.levels.g.values.take(self.atom_data.lines_lower2level_idx, axis=0, mode='raise')
         g_upper = self.atom_data.levels.g.values.take(self.atom_data.lines_upper2level_idx, axis=0, mode='raise')
 
+
         self.stimulated_emission_factor = 1 - ((g_lower[np.newaxis].T * n_upper) / (g_upper[np.newaxis].T * n_lower))
         # getting rid of the obvious culprits
         self.stimulated_emission_factor[n_lower == 0.0] = 0.0
@@ -642,9 +645,12 @@ class BasePlasmaArray(object):
                                    (self.atom_data.lines.ion_number == species[1])
             self.stimulated_emission_factor[(self.stimulated_emission_factor < 0) & nlte_lines_mask[np.newaxis].T] = 0.0
 
+
         tau_sobolevs = sobolev_coefficient * f_lu[np.newaxis].T * wavelength[np.newaxis].T * self.time_explosion * \
                        n_lower * self.stimulated_emission_factor
         return pd.DataFrame(tau_sobolevs, index=self.atom_data.lines.index, columns=np.arange(len(self.t_rads)))
+
+
 
 
     def calculate_transition_probabilities(self):
