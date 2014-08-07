@@ -12,6 +12,7 @@
 #define MISS_DISTANCE 1e99
 #define C 29979245800.0
 #define INVERSE_C 3.33564095198152e-11
+#define H 6.6260755e-27 // erg*s, converted to CGS units from the NIST Constant Index
 
 rk_state mt_state;
 
@@ -121,11 +122,22 @@ typedef struct StorageModel
   double inner_boundary_albedo;
   int64_t reflective_inner_boundary;
   int64_t current_packet_id;
-  double *chi_bf_index_to_level;
-  double *bound_free_th_frequency;
-  double *bf_lpopulation_ratio_nlte;
-  double *bf_lpopulation_ratio;
+
+  int64_t *chi_bf_index_to_level;
+  int64_t chi_bf_index_to_level_nrow;
+  int64_t chi_bf_index_to_level_ncolum;
+
+  double *bf_level_population;
+  int64_t bf_level_population_nrow;
+  int64_t bf_level_population_ncolum;
+
+  double *bf_lpopulation_ratio_nlte_lte;
+  int64_t bf_lpopulation_ratio_nlte_lte_nrow;
+  int64_t bf_lpopulation_ratio_nlte_lte_ncolum;
+
+  double *bf_cross_sections;
   double *t_electron;
+  double *bound_free_th_frequency;
   double kB;
 
 } storage_model_t;
@@ -198,7 +210,7 @@ inline double compute_distance2line(rpacket_t *packet, storage_model_t *storage)
  *
  * @return distance to the Thomson scatter event in centimeters
  */
-inline double compute_distance2continuum(rpacket_t *packet, storage_model_t *storage);
+inline void compute_distance2continuum(rpacket_t *packet, storage_model_t *storage);
 
 inline double calculate_chi_bf(rpacket_t *packet, storage_model_t *storage);
 
@@ -231,5 +243,21 @@ int64_t montecarlo_one_packet_loop(storage_model_t *storage, rpacket_t *packet,
  * @param virtual_packet is the packet virtual
  */
 void rpacket_init(rpacket_t *packet, storage_model_t *storage, double nu, double mu, double energy, int64_t virtual_packet);
+
+inline void check_array_bounds(int64_t ioned, int64_t nrow, int64_t ncolums);
+
+inline void set_array_int( int64_t irow, int64_t icolums, int64_t nrow, int64_t ncolums , int64_t *array, int64_t val );
+
+inline void set_array_double( int64_t irow, int64_t icolums, int64_t nrow, int64_t ncolums , double *array, double val);
+
+inline int64_t get_array_int( int64_t irow, int64_t icolums, int64_t nrow, int64_t ncolums , int64_t *array);
+
+inline double get_array_double( int64_t irow, int64_t icolums, int64_t nrow, int64_t ncolums , double *array);
+
+int64_t montecarlo_thomson_free_free_scatter(rpacket_t *packet, storage_model_t *storage,
+				   double distance, int64_t *reabsorbed);
+
+int64_t montecarlo_thomson_bound_free_scatter(rpacket_t *packet, storage_model_t *storage,
+				   double distance, int64_t *reabsorbed);
 
 #endif // TARDIS_CMONTECARLO_H

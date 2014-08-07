@@ -81,10 +81,26 @@ ctypedef struct storage_model_t:
     double inner_boundary_albedo
     int_type_t reflective_inner_boundary
     int_type_t current_packet_id
-    double *chi_bf_index_to_level
+
+    int_type_t *chi_bf_index_to_level
+    int_type_t chi_bf_index_to_level_nrow
+    int_type_t chi_bf_index_to_level_ncolum
+
     double *bound_free_th_frequency
-    double *bf_lpopulation_ratio_nlte
+    double *bf_cross_section
+
+    double *bf_level_population
+    int_type_t bf_level_population_nrow
+    int_type_t bf_level_population_ncolum
+
+    double *bf_lpopulation_ratio_nlte_lte
+    int_type_t bf_lpopulation_ratio_nlte_lte_nrow
+    int_type_t bf_lpopulation_ratio_nlte_lte_ncolum
+
     double *bf_lpopulation_ratio
+    int_type_t bf_lpopulation_ratio_nrow
+    int_type_t bf_lpopulation_ratio_ncolum
+
     double *t_electron
     double kB
 
@@ -253,6 +269,34 @@ def montecarlo_radial1d(model, int_type_t virtual_packet_flag=0):
     storage.reflective_inner_boundary = model.tardis_config.montecarlo.enable_reflective_inner_boundary
     storage.inner_boundary_albedo = model.tardis_config.montecarlo.inner_boundary_albedo
     storage.current_packet_id = -1
+
+    cdef np.ndarray[int_type_t, ndim=2, mode='c'] bf_index_to_level = model.plasma_array.chi_bf_index_to_level
+    storage.chi_bf_index_to_level = <int_type_t*> bf_index_to_level.data
+    storage.chi_bf_index_to_level_nrow = bf_index_to_level.shape[0]
+    storage.chi_bf_index_to_level_ncolum = bf_index_to_level.shape[1]
+
+    cdef np.ndarray[double, ndim=2, mode='c'] bf_level_populations = model.plasma_array.bf_level_populations
+    storage.bf_level_population = <double*> bf_level_populations.data
+    storage.bf_level_population_nrow = bf_level_populations.shape[0]
+    storage.bf_level_population_ncolum = bf_level_populations.shape[1]
+
+    cdef np.ndarray[double, ndim=2, mode='c'] bf_lpopulation_ratio_nlte_lte = model.plasma_array.bf_lpopulation_ratio_nlte_lte
+    storage.bf_lpopulation_ratio_nlte_lte = <double*> bf_lpopulation_ratio_nlte_lte.data
+    storage.bf_lpopulation_ratio_nlte_lte_nrow = bf_lpopulation_ratio_nlte_lte.shape[0]
+    storage.bf_lpopulation_ratio_nlte_lte_ncolum = bf_lpopulation_ratio_nlte_lte.shape[1]
+
+    cdef np.ndarray[double, ndim=1] bf_cross_sections = model.plasma_array.bf_cross_sections
+    storage.bf_cross_section = <double*>  bf_cross_sections.data
+
+    cdef np.ndarray[double, ndim=1] t_electrons = model.plasma_array.t_electrons
+    storage.t_electron = <double*> t_electrons.data
+
+    cdef np.ndarray[double, ndim=1] bound_free_th_frequency = model.plasma_array.bound_free_th_frequency
+    storage.bound_free_th_frequency = <double*> bound_free_th_frequency.data
+
+
+
+
     ######## Setting up the output ########
     #cdef np.ndarray[double, ndim=1] output_nus = np.zeros(storage.no_of_packets, dtype=np.float64)
     #cdef np.ndarray[double, ndim=1] output_energies = np.zeros(storage.no_of_packets, dtype=np.float64)
