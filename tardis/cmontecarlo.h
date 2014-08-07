@@ -139,13 +139,18 @@ typedef struct StorageModel
   int64_t bf_level_population_nrow;
   int64_t bf_level_population_ncolum;
 
+  double *bf_lpopulation_ratio;
+  int64_t bf_lpopulation_ratio_nrow;
+  int64_t bf_lpopulation_ratio_ncolum;
+
   double *bf_lpopulation_ratio_nlte_lte;
   int64_t bf_lpopulation_ratio_nlte_lte_nrow;
   int64_t bf_lpopulation_ratio_nlte_lte_ncolum;
 
   double *bf_cross_sections;
-  double *t_electron;
   double *bound_free_th_frequency;
+
+  double *t_electrons;
   double kB;
 
 } storage_model_t;

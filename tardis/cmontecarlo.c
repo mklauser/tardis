@@ -214,6 +214,9 @@ inline void compute_distance2continuum(rpacket_t *packet, storage_model_t *stora
 
         }
 
+    packet->d_ff = MISS_DISTANCE;
+    packet->chi_ff = 0;
+
     packet->chi_bf = calculate_chi_bf(packet, storage);
     packet->d_bf = packet->tau_event / packet->chi_bf;
     packet->chi_th = storage->electron_densities[packet->current_shell_id] / storage->sigma_thomson;
@@ -238,7 +241,7 @@ inline double calculate_chi_bf(rpacket_t *packet, storage_model_t *storage)
     int64_t level;
 
     nu = packet->nu;
-    T = storage->t_electron[packet->current_shell_id];
+    T = storage->t_electrons[packet->current_shell_id];
     kB = storage->kB;
     I = storage->chi_bf_index_to_level_nrow; // This is equal to the number of levels
 
@@ -557,7 +560,8 @@ int64_t move_packet_across_shell_boundary(rpacket_t *packet, storage_model_t *st
 int64_t montecarlo_thomson_bound_free_scatter(rpacket_t *packet, storage_model_t *storage,
 				   double distance, int64_t *reabsorbed)
 {
-*reabsorbed = 1;
+fprintf(stderr, "bla");
+//*reabsorbed = 1;
 return 1;
 }
 
@@ -725,18 +729,21 @@ inline montecarlo_event_handler_t get_event_handler(rpacket_t *packet, storage_m
       if ((packet->d_bf <= packet->d_ff) && (packet->d_bf <= packet->d_th))
       {
       //Do bound free
+      fprintf(stderr, "Do bf");
       *distance = packet->d_bf;
       return &montecarlo_thomson_bound_free_scatter;
       }
       else if (packet->d_ff <= packet->d_th)
       {
       // do ff
+      fprintf(stderr, "Do ff");
       *distance = packet->d_ff;
       return &montecarlo_thomson_free_free_scatter;
       }
       else
       {
       //do ths
+      fprintf(stderr, "Do th");
       *distance = packet->d_th;
       return &montecarlo_thomson_scatter;
       }

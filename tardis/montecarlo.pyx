@@ -36,6 +36,14 @@ ctypedef struct rpacket_t:
     int_type_t moved
     double d_boundary
     int_type_t next_shell_id
+    double chi_bf
+    double chi_th
+    double chi_ff
+    double chi_cont
+    double d_bf
+    double d_th
+    double d_ff
+    double d_cont
 
 ctypedef struct storage_model_t:
     double *packet_nus
@@ -86,22 +94,23 @@ ctypedef struct storage_model_t:
     int_type_t chi_bf_index_to_level_nrow
     int_type_t chi_bf_index_to_level_ncolum
 
-    double *bound_free_th_frequency
-    double *bf_cross_section
-
     double *bf_level_population
     int_type_t bf_level_population_nrow
     int_type_t bf_level_population_ncolum
-
-    double *bf_lpopulation_ratio_nlte_lte
-    int_type_t bf_lpopulation_ratio_nlte_lte_nrow
-    int_type_t bf_lpopulation_ratio_nlte_lte_ncolum
 
     double *bf_lpopulation_ratio
     int_type_t bf_lpopulation_ratio_nrow
     int_type_t bf_lpopulation_ratio_ncolum
 
-    double *t_electron
+
+    double *bf_lpopulation_ratio_nlte_lte
+    int_type_t bf_lpopulation_ratio_nlte_lte_nrow
+    int_type_t bf_lpopulation_ratio_nlte_lte_ncolum
+
+    double *bf_cross_sections
+    double *bound_free_th_frequency
+
+    double *t_electrons
     double kB
 
 
@@ -288,10 +297,10 @@ def montecarlo_radial1d(model, int_type_t virtual_packet_flag=0):
     storage.bf_lpopulation_ratio_nlte_lte_ncolum = bf_lpopulation_ratio_nlte_lte.shape[1]
 
     cdef np.ndarray[double, ndim=1] bf_cross_sections = model.plasma_array.bf_cross_sections
-    storage.bf_cross_section = <double*>  bf_cross_sections.data
+    storage.bf_cross_sections = <double*>  bf_cross_sections.data
 
     cdef np.ndarray[double, ndim=1] t_electrons = model.plasma_array.t_electrons
-    storage.t_electron = <double*> t_electrons.data
+    storage.t_electrons = <double*> t_electrons.data
 
     cdef np.ndarray[double, ndim=1] bound_free_th_frequency = model.plasma_array.bound_free_th_frequency
     storage.bound_free_th_frequency = <double*> bound_free_th_frequency.data

@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 from astropy import constants, units as u
 import scipy.special
+import ipdb
 
 from tardis import packet_source, plasma_array
 import montecarlo
@@ -350,6 +351,7 @@ class Radial1DModel(object):
             or np.any(np.isneginf(self.plasma_array.tau_sobolevs.values)):
             raise ValueError('Some tau_sobolevs are nan, inf, -inf in tau_sobolevs. Something went wrong!')
 
+        #ipdb.set_trace()
         self.j_blue_estimators = np.zeros((len(self.t_rads), len(self.atom_data.lines)))
         self.montecarlo_virtual_luminosity = np.zeros_like(self.spectrum.frequency.value)
 
