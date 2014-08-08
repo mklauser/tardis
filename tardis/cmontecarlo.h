@@ -255,6 +255,15 @@ int64_t montecarlo_one_packet_loop(storage_model_t *storage, rpacket_t *packet,
  * @param r distance to the packet from the center in cm
  * @param virtual_packet is the packet virtual
  */
+
+montecarlo_event_handler_t montecarlo_continuum_event_handler(rpacket_t *packet, storage_model_t *storage);
+/**
+ * @brief Returns a continuum event function based on random the continuum oddities
+ * @param packet rpacket structure with packet information
+ * @param storage storage model data
+ * @return A continuum event function
+*/
+
 void rpacket_init(rpacket_t *packet, storage_model_t *storage, double nu, double mu, double energy, int64_t virtual_packet);
 
 inline void check_array_bounds(int64_t ioned, int64_t nrow, int64_t ncolums);
@@ -267,10 +276,13 @@ inline int64_t get_array_int( int64_t irow, int64_t icolums, int64_t nrow, int64
 
 inline double get_array_double( int64_t irow, int64_t icolums, int64_t nrow, int64_t ncolums , double *array);
 
-int64_t montecarlo_thomson_free_free_scatter(rpacket_t *packet, storage_model_t *storage,
+int64_t montecarlo_free_free_scatter(rpacket_t *packet, storage_model_t *storage,
 				   double distance, int64_t *reabsorbed);
 
-int64_t montecarlo_thomson_bound_free_scatter(rpacket_t *packet, storage_model_t *storage,
+int64_t montecarlo_bound_free_scatter(rpacket_t *packet, storage_model_t *storage,
+				   double distance, int64_t *reabsorbed);
+
+int64_t montecarlo_continuum_scatter(rpacket_t *packet, storage_model_t *storage,
 				   double distance, int64_t *reabsorbed);
 
 #endif // TARDIS_CMONTECARLO_H

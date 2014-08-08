@@ -203,9 +203,9 @@ inline void compute_distance2continuum(rpacket_t *packet, storage_model_t *stora
 {
     if (packet->virtual_packet > 0)
         {
-        packet->d_bf = MISS_DISTANCE;
-        packet->d_th = MISS_DISTANCE;
-        packet->d_ff = MISS_DISTANCE;
+        //packet->d_bf = MISS_DISTANCE;
+        //packet->d_th = MISS_DISTANCE;
+        //packet->d_ff = MISS_DISTANCE;
         packet->d_cont = MISS_DISTANCE;
         packet->chi_bf = 0;
         packet->chi_th = 0;
@@ -214,13 +214,13 @@ inline void compute_distance2continuum(rpacket_t *packet, storage_model_t *stora
 
         }
 
-    packet->d_ff = MISS_DISTANCE;
+//    packet->d_ff = MISS_DISTANCE;
     packet->chi_ff = 0;
 
     packet->chi_bf = calculate_chi_bf(packet, storage);
-    packet->d_bf = packet->tau_event / packet->chi_bf;
-    packet->chi_th = storage->electron_densities[packet->current_shell_id] / storage->sigma_thomson;
-    packet->d_th = packet->tau_event / packet->chi_th;
+//    packet->d_bf = packet->tau_event / packet->chi_bf;
+    packet->chi_th = storage->electron_densities[packet->current_shell_id] * storage->sigma_thomson; // For Debugging set * to /
+//    packet->d_th = packet->tau_event / packet->chi_th;
     packet->chi_cont = packet->chi_th + packet->chi_ff + packet->chi_bf;
     packet->d_cont = packet->tau_event / packet->chi_cont;
 }
@@ -440,8 +440,10 @@ int64_t montecarlo_propagate_outwards(rpacket_t *packet, storage_model_t *storag
   move_packet(packet, storage, distance, packet->virtual_packet);
   if (packet->virtual_packet > 0)
     {
-      packet->tau_event += distance * storage->electron_densities[packet->current_shell_id] * 
-	storage->sigma_thomson;
+    //ToDo: Remove old electron_densities tau_event
+    //  packet->tau_event += distance * storage->electron_densities[packet->current_shell_id] *
+	//storage->sigma_thomson;
+	  packet->tau_event += distance * packet->chi_cont;
     }
   else
     {
@@ -467,7 +469,9 @@ int64_t montecarlo_propagate_inwards(rpacket_t *packet, storage_model_t *storage
   move_packet(packet, storage, distance, packet->virtual_packet);
   if (packet->virtual_packet > 0)
     {
-      packet->tau_event += distance * storage->electron_densities[packet->current_shell_id] * storage->sigma_thomson;
+      //ToDo: Remove old electron_densities tau_event
+      //packet->tau_event += distance * storage->electron_densities[packet->current_shell_id] * storage->sigma_thomson;
+      packet->tau_event += distance * packet->chi_cont;
     }
   else
     {
@@ -504,7 +508,7 @@ int64_t montecarlo_propagate_inwards(rpacket_t *packet, storage_model_t *storage
     }
   return 0;
 }
-
+//ToDo: Ask: is this function in use?
 int64_t move_packet_across_shell_boundary(rpacket_t *packet, storage_model_t *storage, 
 					  double distance, int64_t *reabsorbed)
 {
@@ -557,21 +561,6 @@ int64_t move_packet_across_shell_boundary(rpacket_t *packet, storage_model_t *st
     }
   return 0;
 }
-int64_t montecarlo_thomson_bound_free_scatter(rpacket_t *packet, storage_model_t *storage,
-				   double distance, int64_t *reabsorbed)
-{
-fprintf(stderr, "bla");
-//*reabsorbed = 1;
-return 1;
-}
-
-int64_t montecarlo_thomson_free_free_scatter(rpacket_t *packet, storage_model_t *storage,
-				   double distance, int64_t *reabsorbed)
-{
-fprintf(stderr, "Ooups, this should not happen! Free free scattering is not implemented yet. Abort!");
-exit(1);
-}
-
 
 
 int64_t montecarlo_thomson_scatter(rpacket_t *packet, storage_model_t *storage,
@@ -591,9 +580,50 @@ int64_t montecarlo_thomson_scatter(rpacket_t *packet, storage_model_t *storage,
   if (packet->virtual_packet_flag > 0)
     {
       montecarlo_one_packet(storage, packet, 1);
-    }  
+    }
   return 0;
 }
+
+int64_t montecarlo_bound_free_scatter(rpacket_t *packet, storage_model_t *storage,
+				   double distance, int64_t *reabsorbed)
+{
+fprintf(stderr, "bla");
+//*reabsorbed = 1;
+return 1;
+}
+
+int64_t montecarlo_free_free_scatter(rpacket_t *packet, storage_model_t *storage,
+				   double distance, int64_t *reabsorbed)
+{
+fprintf(stderr, "Ooups, this should not happen! Free free scattering is not implemented yet. Abort!");
+exit(1);
+}
+
+montecarlo_event_handler_t montecarlo_continuum_event_handler(rpacket_t *packet, storage_model_t *storage)
+{
+    double zrand, normaliz_cont_th, normaliz_cont_bf, normaliz_cont_ff;
+    zrand= (rk_double(&mt_state));
+    normaliz_cont_th = packet->chi_th / packet->chi_cont;
+    normaliz_cont_bf = packet->chi_bf / packet->chi_cont;
+    normaliz_cont_ff = packet->chi_ff / packet->chi_cont;
+    if (zrand < normaliz_cont_th)
+        {
+        //Return the electron scatter event function
+        return &montecarlo_thomson_scatter;
+        }
+    else if(zrand < (normaliz_cont_th + normaliz_cont_bf))
+        {
+        //Return the bound-free scatter event function
+        return &montecarlo_bound_free_scatter;
+        }
+    else
+        {
+        //Return the free-free scatter event function
+        return &montecarlo_free_free_scatter;
+        }
+
+}
+
 
 int64_t montecarlo_line_scatter(rpacket_t *packet, storage_model_t *storage,
 				double distance, int64_t *reabsorbed)
@@ -604,6 +634,7 @@ int64_t montecarlo_line_scatter(rpacket_t *packet, storage_model_t *storage,
   double inverse_doppler_factor = 0.0;
   double tau_line = 0.0;
   double tau_electron = 0.0;
+  double tau_continuum = 0.0;
   double tau_combined = 0.0;
   int64_t virtual_close_line = 0;
   int64_t j_blue_idx = -1;
@@ -613,8 +644,10 @@ int64_t montecarlo_line_scatter(rpacket_t *packet, storage_model_t *storage,
       increment_j_blue_estimator(packet, storage, distance, j_blue_idx);
     }
   tau_line = storage->line_lists_tau_sobolevs[packet->current_shell_id * storage->line_lists_tau_sobolevs_nd + packet->next_line_id];
-  tau_electron = storage->sigma_thomson * storage->electron_densities[packet->current_shell_id] * distance;
-  tau_combined = tau_line + tau_electron;
+  //ToDo: Remove tau_electron
+  //tau_electron = storage->sigma_thomson * storage->electron_densities[packet->current_shell_id] * distance;
+  tau_continuum = packet->chi_cont * distance;
+  tau_combined = tau_line + tau_continuum;
   packet->next_line_id += 1;
   if (packet->next_line_id == storage->no_of_lines)
     {
@@ -726,30 +759,10 @@ inline montecarlo_event_handler_t get_event_handler(rpacket_t *packet, storage_m
     }
   else // Look for a continues event
     {
-      if ((packet->d_bf <= packet->d_ff) && (packet->d_bf <= packet->d_th))
-      {
-      //Do bound free
-      fprintf(stderr, "Do bf");
-      *distance = packet->d_bf;
-      return &montecarlo_thomson_bound_free_scatter;
-      }
-      else if (packet->d_ff <= packet->d_th)
-      {
-      // do ff
-      fprintf(stderr, "Do ff");
-      *distance = packet->d_ff;
-      return &montecarlo_thomson_free_free_scatter;
-      }
-      else
-      {
-      //do ths
-      fprintf(stderr, "Do th");
-      *distance = packet->d_th;
-      return &montecarlo_thomson_scatter;
-      }
+      *distance = packet->d_cont;
+      return montecarlo_continuum_event_handler(packet, storage);
     }
 }
-
 int64_t montecarlo_one_packet_loop(storage_model_t *storage, rpacket_t *packet, int64_t virtual_packet)
 {
   int64_t reabsorbed = 0;
