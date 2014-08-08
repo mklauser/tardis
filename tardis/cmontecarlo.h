@@ -493,6 +493,12 @@ inline double get_array_double( int64_t irow, int64_t icolums, int64_t nrow, int
 
 inline double calculate_chi_bf(rpacket_t *packet, storage_model_t *storage);
 
+void montecarlo_bound_free_scatter(rpacket_t *packet, storage_model_t *storage,
+				   double distance);
+
+void montecarlo_free_free_scatter(rpacket_t *packet, storage_model_t *storage,
+				   double distance);
+
 inline montecarlo_event_handler_t montecarlo_continuum_event_handler(rpacket_t *packet, storage_model_t *storage);
 
 #endif // TARDIS_CMONTECARLO_H

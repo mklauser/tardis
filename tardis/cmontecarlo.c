@@ -529,15 +529,14 @@ void montecarlo_line_scatter(rpacket_t *packet, storage_model_t *storage, double
     }
 }
 
-int64_t montecarlo_bound_free_scatter(rpacket_t *packet, storage_model_t *storage,
-				   double distance, int64_t *reabsorbed)
+void montecarlo_bound_free_scatter(rpacket_t *packet, storage_model_t *storage,
+				   double distance)
 {
-*reabsorbed = 1;
-return 1;
+      rpacket_set_status(packet, TARDIS_PACKET_STATUS_REABSORBED);
 }
 
-int64_t montecarlo_free_free_scatter(rpacket_t *packet, storage_model_t *storage,
-				   double distance, int64_t *reabsorbed)
+void montecarlo_free_free_scatter(rpacket_t *packet, storage_model_t *storage,
+				   double distance)
 {
 fprintf(stderr, "Ooups, this should not happen! Free free scattering is not implemented yet. Abort!");
 exit(1);
