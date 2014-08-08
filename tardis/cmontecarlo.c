@@ -203,9 +203,7 @@ inline void compute_distance2continuum(rpacket_t *packet, storage_model_t *stora
 {
     if (packet->virtual_packet > 0)
         {
-        //packet->d_bf = MISS_DISTANCE;
-        //packet->d_th = MISS_DISTANCE;
-        //packet->d_ff = MISS_DISTANCE;
+        //Set all continuum distances to MISS_DISTANCE in case of an virtual_packet
         packet->d_cont = MISS_DISTANCE;
         packet->chi_bf = 0;
         packet->chi_th = 0;
@@ -213,16 +211,15 @@ inline void compute_distance2continuum(rpacket_t *packet, storage_model_t *stora
         packet->chi_cont = 0;
 
         }
-
-//    packet->d_ff = MISS_DISTANCE;
-    packet->chi_ff = 0;
-
-    packet->chi_bf = calculate_chi_bf(packet, storage);
-//    packet->d_bf = packet->tau_event / packet->chi_bf;
-    packet->chi_th = storage->electron_densities[packet->current_shell_id] * storage->sigma_thomson; // For Debugging set * to /
-//    packet->d_th = packet->tau_event / packet->chi_th;
-    packet->chi_cont = packet->chi_th + packet->chi_ff + packet->chi_bf;
-    packet->d_cont = packet->tau_event / packet->chi_cont;
+        else
+        {
+        // Compute the continuum oddities for a real packet
+        packet->chi_ff = 0;
+        packet->chi_bf = calculate_chi_bf(packet, storage);
+        packet->chi_th = storage->electron_densities[packet->current_shell_id] * storage->sigma_thomson; // For Debugging set * to /
+        packet->chi_cont = packet->chi_th + packet->chi_ff + packet->chi_bf;
+        packet->d_cont = packet->tau_event / packet->chi_cont;
+    }
 }
 
 inline double calculate_chi_bf(rpacket_t *packet, storage_model_t *storage)
@@ -249,20 +246,14 @@ inline double calculate_chi_bf(rpacket_t *packet, storage_model_t *storage)
         nu_th = storage->bound_free_th_frequency[i];
         if (nu_th < nu){
 
-            //atom = get_array_int(i,0,storage->chi_bf_index_to_level_nrow, storage->chi_bf_index_to_level_ncolum,
-            //storage->chi_bf_index_to_level);
-            //ion = get_array_int(i,1,storage->chi_bf_index_to_level_nrow, storage->chi_bf_index_to_level_ncolum,
-            //storage->chi_bf_index_to_level);
-            //level = get_array_int(i,2,storage->chi_bf_index_to_level_nrow, storage->chi_bf_index_to_level_ncolum,
-            //storage->chi_bf_index_to_level);
+            // get the levelpopulation for the level ijk in the current shell
             l_pop = get_array_double(i,packet->current_shell_id, storage->bf_level_population_nrow,
             		storage->bf_level_population_ncolum, storage->bf_level_population);
-            
+
+            //get the levelpopulation ratio \frac{n_{0,j+1,k}}{n_{i,j,k}} \frac{n_{i,j,k}}{n_{0,j+1,k}}^{*}
             l_pop_r = get_array_double(i,packet->current_shell_id, storage->bf_lpopulation_ratio_nlte_lte_nrow,
             		storage->bf_lpopulation_ratio_nlte_lte_ncolum, storage->bf_lpopulation_ratio_nlte_lte);
 
-            //l_pop = storage->bf_level_populations[i][packet->current_shell_id];
-            //l_pop_r = storage->bf_lpopulation_ratio_nlte_lte[i][packet->current_shell_id ];
             bf_helper += storage->bf_cross_sections[i] * l_pop * pow((nu_th/nu),3) * (1-l_pop_r * exp(-(H * nu)/kB /T));
         }
     }
@@ -587,8 +578,7 @@ int64_t montecarlo_thomson_scatter(rpacket_t *packet, storage_model_t *storage,
 int64_t montecarlo_bound_free_scatter(rpacket_t *packet, storage_model_t *storage,
 				   double distance, int64_t *reabsorbed)
 {
-fprintf(stderr, "bla");
-//*reabsorbed = 1;
+*reabsorbed = 1;
 return 1;
 }
 
@@ -606,6 +596,8 @@ montecarlo_event_handler_t montecarlo_continuum_event_handler(rpacket_t *packet,
     normaliz_cont_th = packet->chi_th / packet->chi_cont;
     normaliz_cont_bf = packet->chi_bf / packet->chi_cont;
     normaliz_cont_ff = packet->chi_ff / packet->chi_cont;
+    //return &montecarlo_thomson_scatter;
+
     if (zrand < normaliz_cont_th)
         {
         //Return the electron scatter event function
