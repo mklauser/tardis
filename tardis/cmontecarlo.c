@@ -61,6 +61,48 @@ inline tardis_error_t binary_search(double *x, double x_insert, int64_t imin, in
   return ret_val;
 }
 
+inline void check_array_bounds(int64_t ioned,int64_t nrow,int64_t ncolums)
+{
+    if (ioned > ((ncolums + 1) * (nrow +1)))
+        {
+        fprintf(stderr, "Array Index Out Of Bounds");
+        exit(1);
+        }
+}
+
+inline void set_array_int(int64_t irow,int64_t icolums,int64_t nrow,int64_t ncolums , int64_t *array, int64_t val )
+    {
+    int64_t ioned = 0;
+    ioned = nrow * icolums + irow;
+    check_array_bounds(ioned, nrow, ncolums);
+    array[ioned] = val;
+    }
+
+inline void set_array_double(int64_t  irow, int64_t icolums, int64_t nrow, int64_t ncolums , double *array, double val )
+    {
+    int64_t ioned = 0;
+    ioned = nrow * icolums + irow;
+    check_array_bounds(ioned, nrow, ncolums);
+    array[ioned] = val;
+    }
+
+inline int64_t get_array_int( int64_t irow, int64_t icolums, int64_t nrow, int64_t ncolums , int64_t *array)
+    {
+    int64_t ioned = 0;
+    ioned = nrow * icolums + irow;
+    check_array_bounds(ioned, nrow, ncolums);
+    return array[ioned];
+    }
+
+inline double get_array_double( int64_t irow, int64_t icolums, int64_t nrow, int64_t ncolums , double *array)
+    {
+    int64_t ioned = 0;
+    ioned = nrow * icolums + irow;
+    check_array_bounds(ioned, nrow, ncolums);
+    return array[ioned];
+    }
+
+
 inline double rpacket_doppler_factor(rpacket_t *packet, storage_model_t *storage)
 {
   return 1.0 - rpacket_get_mu(packet) * rpacket_get_r(packet) * storage->inverse_time_explosion * INVERSE_C;
@@ -159,6 +201,74 @@ inline double compute_distance2electron(rpacket_t *packet, storage_model_t *stor
     storage->inverse_sigma_thomson;
   return rpacket_get_tau_event(packet) * inverse_ne;
 }
+
+inline void compute_distance2continuum(rpacket_t *packet, storage_model_t *storage)
+{
+    double chi_boundfree, chi_freefree, chi_electron, chi_continuum, d_continuum;
+    if (packet->virtual_packet > 0)
+        {
+        //Set all continuum distances to MISS_DISTANCE in case of an virtual_packet
+        rpacket_set_d_continuum(packet, MISS_DISTANCE);
+        rpacket_set_chi_boundfree(packet,0.0);
+        rpacket_set_chi_electron(packet,0.0);
+        rpacket_set_chi_freefree(packet,0.0);
+        rpacket_set_chi_continuum(packet,0.0);
+        }
+        else
+        {
+        // Compute the continuum oddities for a real packet
+        chi_boundfree = calculate_chi_bf(packet, storage);
+        chi_freefree = 0.0;
+        chi_electron =  storage->electron_densities[packet->current_shell_id] * storage->sigma_thomson; // For Debugging set * to /
+        chi_continuum = chi_boundfree + chi_freefree + chi_electron;
+        d_continuum = rpacket_get_tau_event(packet) / chi_continuum;
+
+        rpacket_set_chi_freefree(packet, chi_freefree);
+        rpacket_set_chi_boundfree(packet, chi_boundfree);
+        rpacket_set_chi_electron(packet, chi_electron);
+        rpacket_set_chi_continuum(packet, chi_continuum);
+        rpacket_set_d_continuum(packet, d_continuum);
+    }
+}
+
+inline double calculate_chi_bf(rpacket_t *packet, storage_model_t *storage)
+{
+    double bf_helper = 0;
+    double nu_th;
+    double l_pop_r;
+    double l_pop;
+    double T;
+    double kB;
+    double nu;
+    int64_t i = 0;
+    int64_t I;
+    int64_t atom;
+    int64_t ion;
+    int64_t level;
+
+    nu = rpacket_get_nu(packet);
+    T = storage->t_electrons[packet->current_shell_id];
+    kB = storage->kB;
+    I = storage->chi_bf_index_to_level_nrow; // This is equal to the number of levels
+
+    for(i=0;i<=I;++i){
+        nu_th = storage->bound_free_th_frequency[i];
+        if (nu_th < nu){
+
+            // get the levelpopulation for the level ijk in the current shell
+            l_pop = get_array_double(i,packet->current_shell_id, storage->bf_level_population_nrow,
+            		storage->bf_level_population_ncolum, storage->bf_level_population);
+
+            //get the levelpopulation ratio \frac{n_{0,j+1,k}}{n_{i,j,k}} \frac{n_{i,j,k}}{n_{0,j+1,k}}^{*}
+            l_pop_r = get_array_double(i,packet->current_shell_id, storage->bf_lpopulation_ratio_nlte_lte_nrow,
+            		storage->bf_lpopulation_ratio_nlte_lte_ncolum, storage->bf_lpopulation_ratio_nlte_lte);
+
+            bf_helper += storage->bf_cross_sections[i] * l_pop * pow((nu_th/nu),3) * (1-l_pop_r * exp(-(H * nu)/kB /T));
+        }
+    }
+    return bf_helper;
+}
+
 
 inline int64_t macro_atom(rpacket_t *packet, storage_model_t *storage)
 {
@@ -276,13 +386,11 @@ int64_t montecarlo_one_packet(storage_model_t *storage, rpacket_t *packet, int64
 
 void move_packet_across_shell_boundary(rpacket_t *packet, storage_model_t *storage, double distance)
 {
-  double comov_energy, doppler_factor, comov_nu, inverse_doppler_factor;
+  double comov_energy, doppler_factor, comov_nu, inverse_doppler_factor, delta_tau_event;
   move_packet(packet, storage, distance);
   if (rpacket_get_virtual_packet(packet) > 0)
     {
-      double delta_tau_event = distance * 
-	storage->electron_densities[rpacket_get_current_shell_id(packet)] * 
-	storage->sigma_thomson;
+      delta_tau_event = rpacket_get_chi_continuum(packet) * distance;
       rpacket_set_tau_event(packet, rpacket_get_tau_event(packet) + delta_tau_event);
     }
   else
@@ -347,7 +455,7 @@ void montecarlo_line_scatter(rpacket_t *packet, storage_model_t *storage, double
   double old_doppler_factor = 0.0;
   double inverse_doppler_factor = 0.0;
   double tau_line = 0.0;
-  double tau_electron = 0.0;
+  double tau_continuum = 0.0;
   double tau_combined = 0.0;
   bool virtual_close_line = false;
   int64_t j_blue_idx = -1;
@@ -357,8 +465,8 @@ void montecarlo_line_scatter(rpacket_t *packet, storage_model_t *storage, double
       increment_j_blue_estimator(packet, storage, distance, j_blue_idx);
     }
   tau_line = storage->line_lists_tau_sobolevs[rpacket_get_current_shell_id(packet) * storage->line_lists_tau_sobolevs_nd + rpacket_get_next_line_id(packet)];
-  tau_electron = storage->sigma_thomson * storage->electron_densities[rpacket_get_current_shell_id(packet)] * distance;
-  tau_combined = tau_line + tau_electron;
+  tau_continuum = rpacket_get_chi_continuum(packet) * distance;
+  tau_combined = tau_line + tau_continuum;
   rpacket_set_next_line_id(packet, rpacket_get_next_line_id(packet) + 1);
   if (rpacket_get_next_line_id(packet) == storage->no_of_lines)
     {
@@ -421,6 +529,21 @@ void montecarlo_line_scatter(rpacket_t *packet, storage_model_t *storage, double
     }
 }
 
+int64_t montecarlo_bound_free_scatter(rpacket_t *packet, storage_model_t *storage,
+				   double distance, int64_t *reabsorbed)
+{
+*reabsorbed = 1;
+return 1;
+}
+
+int64_t montecarlo_free_free_scatter(rpacket_t *packet, storage_model_t *storage,
+				   double distance, int64_t *reabsorbed)
+{
+fprintf(stderr, "Ooups, this should not happen! Free free scattering is not implemented yet. Abort!");
+exit(1);
+}
+
+
 inline void montecarlo_compute_distances(rpacket_t *packet, storage_model_t *storage)
 {
   // Check if the last line was the same nu as the current line.
@@ -437,32 +560,62 @@ inline void montecarlo_compute_distances(rpacket_t *packet, storage_model_t *sto
       double d_line;
       compute_distance2line(packet, storage, &d_line);
       rpacket_set_d_line(packet, d_line);
-      rpacket_set_d_electron(packet, compute_distance2electron(packet, storage));
+      //ToDo: Remove old rpacket_set_d_electron
+      //rpacket_set_d_electron(packet, compute_distance2electron(packet, storage));
+      compute_distance2continuum(packet, storage);
     }
 }
 
+inline montecarlo_event_handler_t montecarlo_continuum_event_handler(rpacket_t *packet, storage_model_t *storage)
+{
+    double zrand, normaliz_cont_th, normaliz_cont_bf, normaliz_cont_ff;
+    zrand= (rk_double(&mt_state));
+    normaliz_cont_th = rpacket_get_chi_electron(packet) / rpacket_get_chi_continuum(packet);
+    normaliz_cont_bf = rpacket_get_chi_boundfree(packet) /  rpacket_get_chi_continuum(packet);
+    normaliz_cont_ff = rpacket_get_chi_freefree(packet) /  rpacket_get_chi_continuum(packet);
+
+    if (zrand < normaliz_cont_th)
+        {
+        //Return the electron scatter event function
+        return &montecarlo_thomson_scatter;
+        }
+    else if(zrand < (normaliz_cont_th + normaliz_cont_bf))
+        {
+        //Return the bound-free scatter event function
+        return &montecarlo_bound_free_scatter;
+        }
+    else
+        {
+        //Return the free-free scatter event function
+        return &montecarlo_free_free_scatter;
+        }
+
+}
+
+
+
 inline montecarlo_event_handler_t get_event_handler(rpacket_t *packet, storage_model_t *storage, double *distance)
 {
-  double d_boundary, d_electron, d_line;
+  double d_boundary, d_continuum, d_line;
   montecarlo_compute_distances(packet, storage);
   d_boundary = rpacket_get_d_boundary(packet);
-  d_electron = rpacket_get_d_electron(packet);
+  d_continuum = rpacket_get_d_continuum(packet);
   d_line = rpacket_get_d_line(packet);
   montecarlo_event_handler_t handler;
-  if (d_line <= d_boundary && d_line <= d_electron)
+  if (d_line <= d_boundary && d_line <= d_continuum)
     {
       *distance = d_line;
       handler =  &montecarlo_line_scatter;
     }
-  else if (d_boundary <= d_electron)
+  else if (d_boundary <= d_continuum)
     {
       *distance = d_boundary;
       handler =  &move_packet_across_shell_boundary;
     }
   else
     {
-      *distance = d_electron;
-      handler = &montecarlo_thomson_scatter;
+      *distance = d_continuum;
+      handler = montecarlo_continuum_event_handler(packet, storage);
     }
   return handler;
 }

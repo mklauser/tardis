@@ -12,6 +12,7 @@
 #define MISS_DISTANCE 1e99
 #define C 29979245800.0
 #define INVERSE_C 3.33564095198152e-11
+#define H 6.6260755e-27 // erg*s, converted to CGS units from the NIST Constant Index
 
 rk_state mt_state;
 
@@ -38,8 +39,8 @@ typedef struct RPacket
   double mu; /**< Cosine of the angle of the packet. */
   double energy; /**< Energy of the packet in erg. */
   double r; /**< Distance from center in cm. */
-  double tau_event;
-  double nu_line;
+  double tau_event; /**< Optical depth to next event. */
+  double nu_line; /**< frequency of the last line. */
   int64_t current_shell_id; /**< ID of the current shell. */
   int64_t next_line_id; /**< The index of the next line that the packet will encounter. */
   /**
@@ -66,11 +67,22 @@ typedef struct RPacket
    */
   int64_t virtual_packet_flag;
   int64_t virtual_packet;
-  double d_line; /**< Distance to electron event. */
-  double d_electron; /**< Distance to line event. */
+  double d_inner; /**< Distance to the inner shell boundary. */
+  double d_outer; /**< Distance to the outer shell boundary. */
+  double d_line; /**< Distance to the next possible line event. */
+  double d_electron; /**< Distance to the next electron scatter event. */
+  int64_t moved;
   double d_boundary; /**< Distance to shell boundary. */
   int64_t next_shell_id; /**< ID of the next shell packet visits. */
   rpacket_status_t status; /**< Packet status (in process, emitted or reabsorbed). */
+  double chi_bf;
+  double chi_th;
+  double chi_ff;
+  double chi_cont;
+  double d_bf;
+  double d_th;
+  double d_ff;
+  double d_cont;
 } rpacket_t;
 
 typedef struct StorageModel
@@ -118,6 +130,29 @@ typedef struct StorageModel
   double inner_boundary_albedo;
   int64_t reflective_inner_boundary;
   int64_t current_packet_id;
+
+  int64_t *chi_bf_index_to_level;
+  int64_t chi_bf_index_to_level_nrow;
+  int64_t chi_bf_index_to_level_ncolum;
+
+  double *bf_level_population;
+  int64_t bf_level_population_nrow;
+  int64_t bf_level_population_ncolum;
+
+  double *bf_lpopulation_ratio;
+  int64_t bf_lpopulation_ratio_nrow;
+  int64_t bf_lpopulation_ratio_ncolum;
+
+  double *bf_lpopulation_ratio_nlte_lte;
+  int64_t bf_lpopulation_ratio_nlte_lte_nrow;
+  int64_t bf_lpopulation_ratio_nlte_lte_ncolum;
+
+  double *bf_cross_sections;
+  double *bound_free_th_frequency;
+
+  double *t_electrons;
+  double kB;
+
 } storage_model_t;
 
 typedef void (*montecarlo_event_handler_t)(rpacket_t *packet, storage_model_t *storage, double distance);
@@ -327,14 +362,84 @@ inline void rpacket_set_d_boundary(rpacket_t *packet, double d_boundary)
   packet->d_boundary = d_boundary;
 }
 
+inline double rpacket_get_d_continuum(rpacket_t *packet)
+{
+  return packet->d_cont;
+}
+
 inline double rpacket_get_d_electron(rpacket_t *packet)
 {
-  return packet->d_electron;
+  return packet->d_th;
+}
+
+inline double rpacket_get_d_freefree(rpacket_t *packet)
+{
+  return packet->d_ff;
+}
+
+inline double rpacket_get_d_boundfree(rpacket_t *packet)
+{
+  return packet->d_bf;
+}
+
+inline void rpacket_set_d_continuum(rpacket_t *packet, double d_continuum)
+{
+  packet->d_cont = d_continuum;
 }
 
 inline void rpacket_set_d_electron(rpacket_t *packet, double d_electron)
 {
-  packet->d_electron = d_electron;
+  packet->d_th = d_electron;
+}
+
+inline void rpacket_set_d_freefree(rpacket_t *packet, double d_freefree)
+{
+  packet->d_ff = d_freefree;
+}
+
+inline void rpacket_set_d_boundfree(rpacket_t *packet, double d_boundfree)
+{
+  packet->d_bf = d_boundfree;
+}
+
+inline double rpacket_get_chi_continuum(rpacket_t *packet)
+{
+  return packet->chi_cont;
+}
+
+inline double rpacket_get_chi_electron(rpacket_t *packet)
+{
+  return packet->chi_th;
+}
+
+inline double rpacket_get_chi_freefree(rpacket_t *packet)
+{
+  return packet->chi_ff;
+}
+
+inline double rpacket_get_chi_boundfree(rpacket_t *packet)
+{
+  return packet->chi_bf;
+}
+
+inline void rpacket_set_chi_continuum(rpacket_t *packet, double chi_continuum)
+{
+  packet->chi_cont = chi_continuum;
+}
+
+inline void rpacket_set_chi_electron(rpacket_t *packet, double chi_electron)
+{
+  packet->chi_th = chi_electron;
+}
+
+inline void rpacket_set_chi_freefree(rpacket_t *packet, double chi_freefree)
+{
+  packet->chi_ff = chi_freefree;
+}
+
+inline void rpacket_set_chi_boundfree(rpacket_t *packet, double chi_boundfree)
+{
+  packet->chi_bf = chi_boundfree;
 }
 
 inline double rpacket_get_d_line(rpacket_t *packet)
@@ -375,6 +480,20 @@ inline void rpacket_reset_tau_event(rpacket_t *packet)
 }
 
 inline tardis_error_t rpacket_init(rpacket_t *packet, storage_model_t *storage, int packet_index, int virtual_packet_flag);
+
+inline void check_array_bounds(int64_t ioned, int64_t nrow, int64_t ncolums);
+
+inline void set_array_int( int64_t irow, int64_t icolums, int64_t nrow, int64_t ncolums , int64_t *array, int64_t val );
+
+inline void set_array_double( int64_t irow, int64_t icolums, int64_t nrow, int64_t ncolums , double *array, double val);
+
+inline int64_t get_array_int( int64_t irow, int64_t icolums, int64_t nrow, int64_t ncolums , int64_t *array);
+
+inline double get_array_double( int64_t irow, int64_t icolums, int64_t nrow, int64_t ncolums , double *array);
+
+inline double calculate_chi_bf(rpacket_t *packet, storage_model_t *storage);
+
+inline montecarlo_event_handler_t montecarlo_continuum_event_handler(rpacket_t *packet, storage_model_t *storage);
 
 #endif // TARDIS_CMONTECARLO_H
 

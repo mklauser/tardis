@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 from astropy import constants, units as u
 import scipy.special
+import ipdb
 
 from tardis import packet_source, plasma_array
 import montecarlo
