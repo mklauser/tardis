@@ -217,11 +217,19 @@ inline void compute_distance2continuum(rpacket_t *packet, storage_model_t *stora
         else
         {
         // Compute the continuum oddities for a real packet
-        chi_boundfree = calculate_chi_bf(packet, storage);
+        chi_boundfree = 0.0;//calculate_chi_bf(packet, storage);
+        chi_boundfree = calculate_chi_bf(packet, storage); // For Debug;
         chi_freefree = 0.0;
         chi_electron =  storage->electron_densities[packet->current_shell_id] * storage->sigma_thomson; // For Debugging set * to /
         chi_continuum = chi_boundfree + chi_freefree + chi_electron;
         d_continuum = rpacket_get_tau_event(packet) / chi_continuum;
+
+//        fprintf(stderr, "--------\n");
+//        fprintf(stderr, "nu = %e \n", rpacket_get_nu(packet));
+//        fprintf(stderr, "chi_electron = %e\n", chi_electron);
+//        fprintf(stderr, "chi_boundfree = %e\n", calculate_chi_bf(packet, storage));
+//        fprintf(stderr, "chi_line = %e \n", rpacket_get_tau_event(packet) / rpacket_get_d_line(packet));
+//        fprintf(stderr, "--------\n");
 
         rpacket_set_chi_freefree(packet, chi_freefree);
         rpacket_set_chi_boundfree(packet, chi_boundfree);
@@ -238,7 +246,7 @@ inline double calculate_chi_bf(rpacket_t *packet, storage_model_t *storage)
     double l_pop_r;
     double l_pop;
     double T;
-    double kB;
+//    double kB;
     double nu;
     int64_t i = 0;
     int64_t I;
@@ -248,7 +256,7 @@ inline double calculate_chi_bf(rpacket_t *packet, storage_model_t *storage)
 
     nu = rpacket_get_nu(packet);
     T = storage->t_electrons[packet->current_shell_id];
-    kB = storage->kB;
+//    kB = storage->kB;
     I = storage->chi_bf_index_to_level_nrow; // This is equal to the number of levels
 
     for(i=0;i<=I;++i){
@@ -263,7 +271,12 @@ inline double calculate_chi_bf(rpacket_t *packet, storage_model_t *storage)
             l_pop_r = get_array_double(i,packet->current_shell_id, storage->bf_lpopulation_ratio_nlte_lte_nrow,
             		storage->bf_lpopulation_ratio_nlte_lte_ncolum, storage->bf_lpopulation_ratio_nlte_lte);
 
-            bf_helper += storage->bf_cross_sections[i] * l_pop * pow((nu_th/nu),3) * (1-l_pop_r * exp(-(H * nu)/kB /T));
+            bf_helper += l_pop * storage->bf_cross_sections[i] *  pow((nu_th/nu),3) * (1-(l_pop_r * exp(-(H * nu)/KB /T)));
+//            fprintf(stderr, ">>> \n");
+//            fprintf(stderr, "exp  = %e \n" ,exp(-(H * nu)/KB /T));
+//            fprintf(stderr, "lpop = %e \n", l_pop);
+//            fprintf(stderr, "lpop ratio = %e \n", l_pop_r);
+//            fprintf(stderr, "<<< \n");
         }
     }
     return bf_helper;

@@ -113,7 +113,7 @@ ctypedef struct storage_model_t:
     double *bound_free_th_frequency
 
     double *t_electrons
-    double kB
+    #double kB
 
 cdef extern int_type_t montecarlo_one_packet(storage_model_t *storage, rpacket_t *packet, int_type_t virtual_mode)
 cdef extern void rpacket_init(rpacket_t *packet, storage_model_t *storage, int packet_index, int virtual_packet_flag)

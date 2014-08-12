@@ -772,7 +772,7 @@ class BasePlasmaArray(object):
 
     def _get_lpopulation_ratio_nlte_lte(self,bound_free_cross_section_at_threshold, level_population_ratio, level_population_ratio_lte):
 
-        helper = (level_population_ratio.__array__() ** -1 * level_population_ratio_lte.__array__())
+        helper = (level_population_ratio.__array__()  * level_population_ratio_lte.__array__() ** -1)
         helper[np.isnan(helper)] = 0
         helper[helper < 0] = 0
 
@@ -807,15 +807,16 @@ class BasePlasmaArray(object):
         nu_bins = np.linspace(2.9979246e+14, 5.9979246e+15, 10)
 
 
-        bf_dataf = self.atom_data.levels.join(self.atom_data.ion_cx_th)
-        bf_dataf['cross_section'] = bf_dataf['cross_section'].fillna(0) # add factor here to increase the cross section. For debugging
+#        bf_dataf = self.atom_data.levels.join(self.atom_data.ion_cx_th)
+        bf_dataf = pd.concat([self.atom_data.levels,self.atom_data.ion_cx_th], axis=1)
+        bf_dataf['cross_section'] = bf_dataf['cross_section'].fillna(0) #*5e-5# add factor here to increase the cross section. For debugging
 
-        level_populations = self.level_populations.__array__()
+#        level_populations = self.level_populations.__array__()
 
         level_population_ratio = self._get_population_ratio()
         level_population_ratio_lte = self._get_population_ratio_lte(bf_dataf)
 
-        bound_free_cross_section_at_threshold = self.atom_data.ion_cx_th
+#        bound_free_cross_section_at_threshold = self.atom_data.ion_cx_th
 
         bound_free_th_frequency = self._get_bound_free_th_frequency()
 
@@ -828,20 +829,20 @@ class BasePlasmaArray(object):
         cross_sections[~nu_gr_th_fq] = 0
 
         chi_bf = self._get_chi_bf(nu_bins,level_population_ratio,level_population_ratio_lte,bound_free_th_frequency,bound_free_cross_section_at_threshold)
-        chi_bf_sum = np.sum(chi_bf, axis=1)  #sum in color bins over all levels
+ #       chi_bf_sum = np.sum(chi_bf, axis=1)  #sum in color bins over all levels
         chi_bf_index_to_level = bf_dataf.reset_index()[['atomic_number', 'ion_number',
                                                       'level_number']].__array__()[None,:, None,:].repeat(chi_bf.shape[0], axis=0).repeat(chi_bf.shape[2],
                                                         axis=2)  #index [nu_bin, level_id, shell_id, [atomic, ion, level]]
 
-        chi_bf_sorted, chi_bf_index_to_level_sorted = sorting(chi_bf, chi_bf_index_to_level)
+#        chi_bf_sorted, chi_bf_index_to_level_sorted = sorting(chi_bf, chi_bf_index_to_level)
 
-        self.chi_bound_free_sorted = np.array(chi_bf_sorted, dtype=np.float64)
-        self.chi_bf_index_to_level_sorted = np.array(chi_bf_index_to_level_sorted, dtype=np.int64)
-        self.chi_bound_free_nu_bins = np.array(chi_bf_sum, dtype=np.float64)
+#        self.chi_bound_free_sorted = np.array(chi_bf_sorted, dtype=np.float64)
+#        self.chi_bf_index_to_level_sorted = np.array(chi_bf_index_to_level_sorted, dtype=np.int64)
+#        self.chi_bound_free_nu_bins = np.array(chi_bf_sum, dtype=np.float64)
 
         self.bf_index_to_level = np.array(chi_bf_index_to_level[0, :, 0, :], dtype=np.int64)
-        self.bf_cross_sections_x_lpopulation = np.array(level_populations * cross_sections[0][:, None],
-                                                        dtype=np.float64)
+#        self.bf_cross_sections_x_lpopulation = np.array(level_populations * cross_sections[0][:, None],
+#                                                        dtype=np.float64)
 
 
 

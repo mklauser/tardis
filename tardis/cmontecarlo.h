@@ -13,6 +13,7 @@
 #define C 29979245800.0
 #define INVERSE_C 3.33564095198152e-11
 #define H 6.6260755e-27 // erg*s, converted to CGS units from the NIST Constant Index
+#define KB 1.3806488e-16 //erg / K converted to CGS units from the NIST Constant Index
 
 rk_state mt_state;
 
@@ -151,7 +152,7 @@ typedef struct StorageModel
   double *bound_free_th_frequency;
 
   double *t_electrons;
-  double kB;
+  //double kB;
 
 } storage_model_t;
 
