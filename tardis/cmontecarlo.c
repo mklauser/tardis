@@ -61,6 +61,8 @@ inline tardis_error_t binary_search(double *x, double x_insert, int64_t imin, in
   return ret_val;
 }
 
+
+
 inline void check_array_bounds(int64_t ioned,int64_t nrow,int64_t ncolums)
 {
     if (ioned > ((ncolums + 1) * (nrow +1)))
@@ -101,6 +103,35 @@ inline double get_array_double( int64_t irow, int64_t icolums, int64_t nrow, int
     check_array_bounds(ioned, nrow, ncolums);
     return array[ioned];
     }
+
+inline void create_kpacket(rpacket *packet)
+{
+    double comov_energy, comov_nu, doppler_factor;
+    doppler_factor = rpacket_doppler_factor(packet, storage);
+    comov_energy = rpacket_get_energy(packet) * doppler_factor;
+    comov_nu = rpacket_get_nu(packet) * doppler_factor;
+    rpacket_set_comov_energy(packet,comov_energy);
+    rpacket_set_comov_nu(packet, comov_nu);
+    packet->packet_status = TARDIS_K_PACKET_IN_PROCESS;
+
+
+//ToDo: compute comiving E, mu and, nu and set these values
+}
+
+inline void create_rpacket(rpacket *packet, double new_comov_nu, double new_comov_mu)
+{
+    double energy, nu, inverse_doppler_factor;
+    inverse_doppler_factor = 1.0 / (1.0 - new_comov_mu * rpacket_get_r(packet) *
+    storage->inverse_time_explosion * INVERSE_C);
+    energy = rpacket_get_comov_energy(packet) * inverse_doppler_factor;
+    nu = new_comov_nu * inverse_doppler_factor;
+    rpacket_set_energy(packet, energy);
+    rpacket_set_nu(packet, nu);
+    rpacket_set_mu(packet, new_comov_mu);
+    packet->packet_status = TARDIS_R_PACKET_IN_PROCESS;
+
+//ToDo: get restframe mu and nu compute comoving
+}
 
 
 inline double rpacket_doppler_factor(rpacket_t *packet, storage_model_t *storage)

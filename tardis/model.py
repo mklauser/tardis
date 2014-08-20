@@ -8,7 +8,6 @@ import numpy as np
 import pandas as pd
 from astropy import constants, units as u
 import scipy.special
-import ipdb
 
 from tardis import packet_source, plasma_array
 import montecarlo
@@ -159,7 +158,6 @@ class Radial1DModel(object):
                                              nlte_species=self.tardis_config.plasma.nlte.species)
         else:
             raise ValueError('line_interaction_type can only be "scatter", "downbranch", or "macroatom"')
-
 
 
     @property

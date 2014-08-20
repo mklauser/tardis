@@ -4,12 +4,7 @@
 # cython: cdivision=True
 
 
-import logging
-import time
-
-import numpy as np
 cimport numpy as np
-from astropy import constants
 
 np.import_array()
 
@@ -20,10 +15,22 @@ ctypedef enum rpacket_status_t:
     TARDIS_PACKET_STATUS_EMITTED = 1
     TARDIS_PACKET_STATUS_REABSORBED = 2
 
+ctypedef enum packet_status_t:
+    TARDIS_R_PACKET_IN_PROCESS = 0
+    TARDIS_R_PACKET_STATUS_EMITTED = 1
+    TARDIS_R_PACKET_STATUS_REABSORBED = 2
+    TARDIS_R_PACKET_STATUS_DISABLED = 3
+    TARDIS_K_PACKET_IN_PROCESS = 4
+    TARDIS_K_PACKET_STATUS_DISABLED = 5
+    TARDIS_I_PACKET_IN_PROCESS = 6
+    TARDIS_I_PACKET_STATUS_DISABLED = 7
+
 ctypedef struct rpacket_t:
     double nu
     double mu
     double energy
+    double comov_nu
+    double comov_energy
     double r
     double tau_event
     double nu_line
@@ -38,6 +45,7 @@ ctypedef struct rpacket_t:
     double d_electron
     double d_boundary
     rpacket_status_t next_shell_id
+    packet_status_t status
     double chi_bf
     double chi_th
     double chi_ff

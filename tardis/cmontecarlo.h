@@ -31,6 +31,19 @@ typedef enum
     TARDIS_PACKET_STATUS_REABSORBED = 2
   } rpacket_status_t;
 
+typedef enum
+{
+    TARDIS_R_PACKET_IN_PROCESS = 0,
+    TARDIS_R_PACKET_STATUS_EMITTED = 1,
+    TARDIS_R_PACKET_STATUS_REABSORBED = 2,
+    TARDIS_R_PACKET_STATUS_DISABLED = 3,
+    TARDIS_K_PACKET_IN_PROCESS = 4,
+    TARDIS_K_PACKET_STATUS_DISABLED  = 5,
+    TARDIS_I_PACKET_IN_PROCESS = 6,
+    TARDIS_I_PACKET_STATUS_DISABLED  = 7
+} packet_status_t;
+
+
 /**
  * @brief A photon packet.
  */
@@ -39,6 +52,8 @@ typedef struct RPacket
   double nu; /**< Frequency of the packet in Hz. */
   double mu; /**< Cosine of the angle of the packet. */
   double energy; /**< Energy of the packet in erg. */
+  double comov_nu; /**<Frequency of the packet in the comoving frame. */
+  double comov_energy; /**< Energy of the packet in the comoving frame. */
   double r; /**< Distance from center in cm. */
   double tau_event; /**< Optical depth to next event. */
   double nu_line; /**< frequency of the last line. */
@@ -76,6 +91,7 @@ typedef struct RPacket
   double d_boundary; /**< Distance to shell boundary. */
   int64_t next_shell_id; /**< ID of the next shell packet visits. */
   rpacket_status_t status; /**< Packet status (in process, emitted or reabsorbed). */
+  packet_status_t packet_status;
   double chi_bf;
   double chi_th;
   double chi_ff;
@@ -233,6 +249,15 @@ inline void rpacket_set_nu(rpacket_t *packet, double nu)
   packet->nu = nu;
 }
 
+inline double rpacket_get_comov_nu(rpacket_t *packet)
+{
+  return packet->comov_nu;
+}
+
+inline void rpacket_set_comov_nu(rpacket_t *packet, double comov_nu)
+{
+  packet->comov_nu = comov_nu;
+}
 inline double rpacket_get_mu(rpacket_t *packet)
 {
   return packet->mu;
@@ -251,6 +276,16 @@ inline double rpacket_get_energy(rpacket_t *packet)
 inline void rpacket_set_energy(rpacket_t *packet, double energy)
 {
   packet->energy = energy;
+}
+
+inline double rpacket_get_comov_energy(rpacket_t *packet)
+{
+  return packet->comov_energy;
+}
+
+inline void rpacket_set_comov_energy(rpacket_t *packet, double comov_energy)
+{
+  packet->comov_energy = comov_energy;
 }
 
 inline double rpacket_get_r(rpacket_t *packet)
@@ -480,9 +515,10 @@ inline void rpacket_reset_tau_event(rpacket_t *packet)
   rpacket_set_tau_event(packet, -log(rk_double(&mt_state)));
 }
 
-inline tardis_error_t rpacket_init(rpacket_t *packet, storage_model_t *storage, int packet_index, int virtual_packet_flag);
 
-inline void check_array_bounds(int64_t ioned, int64_t nrow, int64_t ncolums);
+inline tardis_error_t rpacket_init( rpacket_t *packet, storage_model_t *storage, int packet_index, int virtual_packet_flag);
+
+inline void check_array_bounds( int64_t ioned, int64_t nrow, int64_t ncolums);
 
 inline void set_array_int( int64_t irow, int64_t icolums, int64_t nrow, int64_t ncolums , int64_t *array, int64_t val );
 
