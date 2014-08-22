@@ -24,7 +24,7 @@ typedef enum
     TARDIS_ERROR_COMOV_NU_LESS_THAN_NU_LINE = 2
   } tardis_error_t;
 
-typedef enum
+typedef enum // This is the new main status for packet types
   {
     TARDIS_PACKET_STATUS_IN_PROCESS = 0,
     TARDIS_PACKET_STATUS_EMITTED = 1,
@@ -33,14 +33,15 @@ typedef enum
 
 typedef enum
 {
+    // > 0 IN_PROCESS; > 10 EMITTED ; > 20 REABSORBED ; > 30 DISABLED
     TARDIS_R_PACKET_IN_PROCESS = 0,
-    TARDIS_R_PACKET_STATUS_EMITTED = 1,
-    TARDIS_R_PACKET_STATUS_REABSORBED = 2,
-    TARDIS_R_PACKET_STATUS_DISABLED = 3,
-    TARDIS_K_PACKET_IN_PROCESS = 4,
-    TARDIS_K_PACKET_STATUS_DISABLED  = 5,
-    TARDIS_I_PACKET_IN_PROCESS = 6,
-    TARDIS_I_PACKET_STATUS_DISABLED  = 7
+    TARDIS_R_PACKET_STATUS_EMITTED = 10,
+    TARDIS_R_PACKET_STATUS_REABSORBED = 20,
+    TARDIS_R_PACKET_STATUS_DISABLED = 30,
+    TARDIS_K_PACKET_IN_PROCESS = 1,
+    TARDIS_K_PACKET_STATUS_DISABLED  = 11,
+    TARDIS_I_PACKET_IN_PROCESS = 21,
+    TARDIS_I_PACKET_STATUS_DISABLED  = 31
 } packet_status_t;
 
 
@@ -508,6 +509,28 @@ inline void rpacket_set_status(rpacket_t *packet, rpacket_status_t status)
   packet->status = status;
 }
 
+inline packet_status_t rpacket_get_status(rpacket_t *packet)
+{
+  return packet->packet_status;
+}
+
+inline void packet_set_status(rpacket_t *packet, packet_status_t status)
+{
+    if (status < 10)
+    {
+    packet->status = TARDIS_PACKET_STATUS_IN_PROCESS;
+    }
+    else if ( status < 20)
+    {
+    packet->status = TARDIS_PACKET_STATUS_EMITTED;
+    }
+    else
+    {
+     packet->status = TARDIS_PACKET_STATUS_REABSORBED;
+    }
+
+  packet->packet_status = status;
+}
 /* Other accessor methods. */
 
 inline void rpacket_reset_tau_event(rpacket_t *packet)
