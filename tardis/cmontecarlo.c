@@ -104,7 +104,7 @@ inline double get_array_double( int64_t irow, int64_t icolums, int64_t nrow, int
     return array[ioned];
     }
 
-inline void create_kpacket(rpacket *packet)
+inline void create_kpacket(rpacket_t *packet, storage_model_t *storage)
 {
     double comov_energy, comov_nu, doppler_factor;
     doppler_factor = rpacket_doppler_factor(packet, storage);
@@ -118,7 +118,21 @@ inline void create_kpacket(rpacket *packet)
 //ToDo: compute comiving E, mu and, nu and set these values
 }
 
-inline void create_rpacket(rpacket *packet, double new_comov_nu, double new_comov_mu)
+inline void create_ipacket(rpacket_t *packet, storage_model_t *storage)
+{
+    double comov_energy, comov_nu, doppler_factor;
+    doppler_factor = rpacket_doppler_factor(packet, storage);
+    comov_energy = rpacket_get_energy(packet) * doppler_factor;
+    comov_nu = rpacket_get_nu(packet) * doppler_factor;
+    rpacket_set_comov_energy(packet,comov_energy);
+    rpacket_set_comov_nu(packet, comov_nu);
+    packet->packet_status = TARDIS_I_PACKET_IN_PROCESS;
+
+
+//ToDo: compute comiving E, mu and, nu and set these values
+}
+
+inline void create_rpacket(rpacket_t *packet, double new_comov_nu, double new_comov_mu, storage_model_t *storage)
 {
     double energy, nu, inverse_doppler_factor;
     inverse_doppler_factor = 1.0 / (1.0 - new_comov_mu * rpacket_get_r(packet) *
@@ -128,6 +142,8 @@ inline void create_rpacket(rpacket *packet, double new_comov_nu, double new_como
     rpacket_set_energy(packet, energy);
     rpacket_set_nu(packet, nu);
     rpacket_set_mu(packet, new_comov_mu);
+    rpacket_set_comov_energy(packet, -1.0); //comoving energy should never be used in an r packet
+    rpacket_set_comov_nu(packet, -1.0); //comoving nu should never be used in an r packet
     packet->packet_status = TARDIS_R_PACKET_IN_PROCESS;
 
 //ToDo: get restframe mu and nu compute comoving
@@ -633,7 +649,7 @@ inline montecarlo_event_handler_t montecarlo_continuum_event_handler(rpacket_t *
 
 
 
-inline montecarlo_event_handler_t get_event_handler(rpacket_t *packet, storage_model_t *storage, double *distance)
+inline montecarlo_event_handler_t get_r_event_handler(rpacket_t *packet, storage_model_t *storage, double *distance)
 {
   double d_boundary, d_continuum, d_line;
   montecarlo_compute_distances(packet, storage);
@@ -657,6 +673,23 @@ inline montecarlo_event_handler_t get_event_handler(rpacket_t *packet, storage_m
       handler = montecarlo_continuum_event_handler(packet, storage);
     }
   return handler;
+}
+
+inline montecarlo_event_handler_t get_event_handler(rpacket_t *packet, storage_model_t *storage, double *distance)
+{
+    montecarlo_event_handler_t handler;
+    if (packet_is_r_packet(packet))
+    {
+        handler = &get_r_event_handler;
+    } else if  (packet_is_k_packet(packet))
+    {
+        //ToDo:add the k event handler
+    } else if (packet_is_i_packet(packet))
+    {
+        //ToDo:add the i event handler
+    }
+    return handler;
+//ToDo: add the new event handler for the different packet types
 }
 
 int64_t montecarlo_one_packet_loop(storage_model_t *storage, rpacket_t *packet, int64_t virtual_packet)

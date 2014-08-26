@@ -26,22 +26,25 @@ typedef enum
 
 typedef enum // This is the new main status for packet types
   {
-    TARDIS_PACKET_STATUS_IN_PROCESS = 0,
-    TARDIS_PACKET_STATUS_EMITTED = 1,
-    TARDIS_PACKET_STATUS_REABSORBED = 2
+  //[IN_PROCESS,STATUS_EMITTED,STATUS_REABSORBED,STATUS_DISABLED]
+    TARDIS_PACKET_STATUS_IN_PROCESS = 1<<3,
+    TARDIS_PACKET_STATUS_EMITTED = 1<<2,
+    TARDIS_PACKET_STATUS_REABSORBED = 1<<1,
+    TARDIS_PACKET_STATUS_DISABLED  = 1<<0
   } rpacket_status_t;
 
 typedef enum
 {
     // > 0 IN_PROCESS; > 10 EMITTED ; > 20 REABSORBED ; > 30 DISABLED
-    TARDIS_R_PACKET_IN_PROCESS = 0,
-    TARDIS_R_PACKET_STATUS_EMITTED = 10,
-    TARDIS_R_PACKET_STATUS_REABSORBED = 20,
-    TARDIS_R_PACKET_STATUS_DISABLED = 30,
-    TARDIS_K_PACKET_IN_PROCESS = 1,
-    TARDIS_K_PACKET_STATUS_DISABLED  = 11,
-    TARDIS_I_PACKET_IN_PROCESS = 21,
-    TARDIS_I_PACKET_STATUS_DISABLED  = 31
+    // [R,K,I,IN_PROCESS,STATUS_EMITTED,STATUS_REABSORBED,STATUS_DISABLED]
+    TARDIS_R_PACKET_IN_PROCESS = 1<<6|1<<3,
+    TARDIS_R_PACKET_STATUS_EMITTED = 1<<6|1<<2,
+    TARDIS_R_PACKET_STATUS_REABSORBED = 1<<6|1<<1,
+    TARDIS_R_PACKET_STATUS_DISABLED = 1<<6|1<<0,
+    TARDIS_K_PACKET_IN_PROCESS = 1<<5|1<<3,
+    TARDIS_K_PACKET_STATUS_DISABLED  = 1<<5|1<<0,
+    TARDIS_I_PACKET_IN_PROCESS = 1<<4|1<<3,
+    TARDIS_I_PACKET_STATUS_DISABLED  = 1<<4|1<<0
 } packet_status_t;
 
 
@@ -235,6 +238,18 @@ int64_t montecarlo_one_packet(storage_model_t *storage, rpacket_t *packet,
 
 int64_t montecarlo_one_packet_loop(storage_model_t *storage, rpacket_t *packet, 
 				   int64_t virtual_packet);
+
+inline double rpacket_doppler_factor(rpacket_t *packet, storage_model_t *storage);
+/*
+packet type change methods
+*/
+inline void create_kpacket(rpacket_t *packet, storage_model_t *storage);
+
+inline void create_ipacket(rpacket_t *packet, storage_model_t *storage);
+
+inline void create_rpacket(rpacket_t *packet, double new_comov_nu, double new_comov_mu, storage_model_t *storage);
+
+
 
 /*
   Getter and setter methods.
@@ -509,33 +524,45 @@ inline void rpacket_set_status(rpacket_t *packet, rpacket_status_t status)
   packet->status = status;
 }
 
-inline packet_status_t rpacket_get_status(rpacket_t *packet)
+inline packet_status_t packet_get_status(rpacket_t *packet)
 {
   return packet->packet_status;
 }
 
 inline void packet_set_status(rpacket_t *packet, packet_status_t status)
 {
-    if (status < 10)
+    packet->status = status & (15); // get the first 4 bits
+    packet->packet_status = status;
+   /* if (status & 1<<3)// is in process
     {
     packet->status = TARDIS_PACKET_STATUS_IN_PROCESS;
     }
-    else if ( status < 20)
+    else if ( status & 1<<2) // is emitted
     {
     packet->status = TARDIS_PACKET_STATUS_EMITTED;
     }
-    else
+    else // is reabsorbed
     {
      packet->status = TARDIS_PACKET_STATUS_REABSORBED;
     }
 
   packet->packet_status = status;
+  */
 }
 /* Other accessor methods. */
 
-inline void rpacket_reset_tau_event(rpacket_t *packet)
+inline int64_t packet_is_r_packet(rpacket_t *packet)
 {
-  rpacket_set_tau_event(packet, -log(rk_double(&mt_state)));
+return packet_get_status(packet) & 1<<6;
+}
+
+inline int64_t packet_is_k_packet(rpacket_t *packet)
+{
+return packet_get_status(packet) & 1<<5;
+}
+inline int64_t packet_is_i_packet(rpacket_t *packet)
+{
+return packet_get_status(packet) & 1<<4;
 }
 
 
