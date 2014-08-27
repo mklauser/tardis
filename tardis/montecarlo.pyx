@@ -10,140 +10,127 @@ np.import_array()
 
 ctypedef np.int64_t int_type_t
 
-ctypedef enum rpacket_status_t:
-    TARDIS_PACKET_STATUS_IN_PROCESS = 0
-    TARDIS_PACKET_STATUS_EMITTED = 1
-    TARDIS_PACKET_STATUS_REABSORBED = 2
+cdef extern from "cmontecarlo.h":
+    ctypedef enum rpacket_status_t:
+        TARDIS_PACKET_STATUS_IN_PROCESS = 1 << 3
+        TARDIS_PACKET_STATUS_EMITTED = 1 << 2
+        TARDIS_PACKET_STATUS_REABSORBED = 1 << 1
+        TARDIS_PACKET_STATUS_DISABLED = 1 << 0
 
-ctypedef enum packet_status_t:
-    TARDIS_R_PACKET_IN_PROCESS = 0
-    TARDIS_R_PACKET_STATUS_EMITTED = 1
-    TARDIS_R_PACKET_STATUS_REABSORBED = 2
-    TARDIS_R_PACKET_STATUS_DISABLED = 3
-    TARDIS_K_PACKET_IN_PROCESS = 4
-    TARDIS_K_PACKET_STATUS_DISABLED = 5
-    TARDIS_I_PACKET_IN_PROCESS = 6
-    TARDIS_I_PACKET_STATUS_DISABLED = 7
+    ctypedef enum packet_status_t:
+        TARDIS_R_PACKET_IN_PROCESS = 1 << 6 | 1 << 3
+        TARDIS_R_PACKET_STATUS_EMITTED = 1 << 6 | 1 << 2
+        TARDIS_R_PACKET_STATUS_REABSORBED = 1 << 6 | 1 << 1
+        TARDIS_R_PACKET_STATUS_DISABLED = 1 << 6 | 1 << 0
+        TARDIS_K_PACKET_IN_PROCESS = 1 << 5 | 1 << 3
+        TARDIS_K_PACKET_STATUS_DISABLED = 1 << 5 | 1 << 0
+        TARDIS_I_PACKET_IN_PROCESS = 1 << 4 | 1 << 3
+        TARDIS_I_PACKET_STATUS_DISABLED = 1 << 4 | 1 << 0
 
-ctypedef struct rpacket_t:
-    double nu
-    double mu
-    double energy
-    double comov_nu
-    double comov_energy
-    double r
-    double tau_event
-    double nu_line
-    int_type_t current_shell_id
-    int_type_t next_line_id
-    int_type_t last_line
-    int_type_t close_line
-    int_type_t recently_crossed_boundary
-    int_type_t virtual_packet_flag
-    int_type_t virtual_packet
-    double d_line
-    double d_electron
-    double d_boundary
-    rpacket_status_t next_shell_id
-    packet_status_t status
-    double chi_bf
-    double chi_th
-    double chi_ff
-    double chi_cont
-    double d_bf
-    double d_th
-    double d_ff
-    double d_cont
+    ctypedef struct rpacket_t:
+        double nu
+        double mu
+        double energy
+        double comov_nu
+        double comov_energy
+        double r
+        double tau_event
+        double nu_line
+        int_type_t current_shell_id
+        int_type_t next_line_id
+        int_type_t last_line
+        int_type_t close_line
+        int_type_t recently_crossed_boundary
+        int_type_t virtual_packet_flag
+        int_type_t virtual_packet
+        double d_line
+        double d_electron
+        double d_boundary
+        rpacket_status_t next_shell_id
+        packet_status_t status
+        double chi_bf
+        double chi_th
+        double chi_ff
+        double chi_cont
+        double d_bf
+        double d_th
+        double d_ff
+        double d_cont
 
-ctypedef struct storage_model_t:
-    double *packet_nus
-    double *packet_mus
-    double *packet_energies
-    double *output_nus
-    double *output_energies
-    int_type_t *last_line_interaction_in_id
-    int_type_t *last_line_interaction_out_id
-    int_type_t *last_line_interaction_shell_id
-    int_type_t *last_interaction_type
-    int_type_t no_of_packets
-    int_type_t no_of_shells
-    double *r_inner
-    double *r_outer
-    double *v_inner
-    double time_explosion
-    double inverse_time_explosion
-    double *electron_densities
-    double *inverse_electron_densities
-    double *line_list_nu
-    double *line_lists_tau_sobolevs
-    int_type_t line_lists_tau_sobolevs_nd
-    double *line_lists_j_blues
-    int_type_t line_lists_j_blues_nd
-    int_type_t no_of_lines
-    int_type_t line_interaction_id
-    double *transition_probabilities
-    int_type_t transition_probabilities_nd
-    int_type_t *line2macro_level_upper
-    int_type_t *macro_block_references
-    int_type_t *transition_type
-    int_type_t *destination_level_id
-    int_type_t *transition_line_id
-    double *js
-    double *nubars
-    double spectrum_start_nu
-    double spectrum_delta_nu
-    double spectrum_end_nu
-    double *spectrum_virt_nu
-    double sigma_thomson
-    double inverse_sigma_thomson
-    double inner_boundary_albedo
-    int_type_t reflective_inner_boundary
-    int_type_t current_packet_id
+    ctypedef struct storage_model_t:
+        double *packet_nus
+        double *packet_mus
+        double *packet_energies
+        double *output_nus
+        double *output_energies
+        int_type_t *last_line_interaction_in_id
+        int_type_t *last_line_interaction_out_id
+        int_type_t *last_line_interaction_shell_id
+        int_type_t *last_interaction_type
+        int_type_t no_of_packets
+        int_type_t no_of_shells
+        double *r_inner
+        double *r_outer
+        double *v_inner
+        double time_explosion
+        double inverse_time_explosion
+        double *electron_densities
+        double *inverse_electron_densities
+        double *line_list_nu
+        double *line_lists_tau_sobolevs
+        int_type_t line_lists_tau_sobolevs_nd
+        double *line_lists_j_blues
+        int_type_t line_lists_j_blues_nd
+        int_type_t no_of_lines
+        int_type_t line_interaction_id
+        double *transition_probabilities
+        int_type_t transition_probabilities_nd
+        int_type_t *line2macro_level_upper
+        int_type_t *macro_block_references
+        int_type_t *transition_type
+        int_type_t *destination_level_id
+        int_type_t *transition_line_id
+        double *js
+        double *nubars
+        double spectrum_start_nu
+        double spectrum_delta_nu
+        double spectrum_end_nu
+        double *spectrum_virt_nu
+        double sigma_thomson
+        double inverse_sigma_thomson
+        double inner_boundary_albedo
+        int_type_t reflective_inner_boundary
+        int_type_t current_packet_id
 
-    int_type_t *chi_bf_index_to_level
-    int_type_t chi_bf_index_to_level_nrow
-    int_type_t chi_bf_index_to_level_ncolum
+        int_type_t *chi_bf_index_to_level
+        int_type_t chi_bf_index_to_level_nrow
+        int_type_t chi_bf_index_to_level_ncolum
 
-    double *bf_level_population
-    int_type_t bf_level_population_nrow
-    int_type_t bf_level_population_ncolum
+        double *bf_level_population
+        int_type_t bf_level_population_nrow
+        int_type_t bf_level_population_ncolum
 
-    double *bf_lpopulation_ratio
-    int_type_t bf_lpopulation_ratio_nrow
-    int_type_t bf_lpopulation_ratio_ncolum
+        double *bf_lpopulation_ratio
+        int_type_t bf_lpopulation_ratio_nrow
+        int_type_t bf_lpopulation_ratio_ncolum
 
+        double *bf_lpopulation_ratio_nlte_lte
+        int_type_t bf_lpopulation_ratio_nlte_lte_nrow
+        int_type_t bf_lpopulation_ratio_nlte_lte_ncolum
 
-    double *bf_lpopulation_ratio_nlte_lte
-    int_type_t bf_lpopulation_ratio_nlte_lte_nrow
-    int_type_t bf_lpopulation_ratio_nlte_lte_ncolum
+        double *bf_cross_sections
+        double *bound_free_th_frequency
 
-    double *bf_cross_sections
-    double *bound_free_th_frequency
-
-    double *t_electrons
+        double *t_electrons
     #double kB
 
-cdef extern int_type_t montecarlo_one_packet(storage_model_t *storage, rpacket_t *packet, int_type_t virtual_mode)
-cdef extern void rpacket_init(rpacket_t *packet, storage_model_t *storage, int packet_index, int virtual_packet_flag)
-cdef extern double rpacket_get_nu(rpacket_t *packet)
-cdef extern double rpacket_get_energy(rpacket_t *packet)
+    int_type_t montecarlo_one_packet(storage_model_t *storage, rpacket_t *packet, int_type_t virtual_mode)
+    int rpacket_init(rpacket_t *packet, storage_model_t *storage, int packet_index, int virtual_packet_flag)
+    double rpacket_get_nu(rpacket_t *packet)
+    double rpacket_get_energy(rpacket_t *packet)
+    void initialize_random_kit(unsigned long seed)
 
-cdef extern from "randomkit.h":
-    ctypedef struct rk_state:
-        unsigned long key[624]
-        int pos
-        int has_gauss
-        double gauss
 
-    ctypedef enum rk_error:
-        RK_NOERR = 0
-        RK_ENODEV = 1
-        RK_ERR_MAX = 2
-
-    void rk_seed(unsigned long seed, rk_state *state)
-    double rk_double(rk_state *state)
-
-cdef extern rk_state mt_state
 
 def montecarlo_radial1d(model, int_type_t virtual_packet_flag=0):
     """
@@ -176,7 +163,7 @@ def montecarlo_radial1d(model, int_type_t virtual_packet_flag=0):
     print("Start montecarlo_radial1d")
     cdef storage_model_t storage
     cdef rpacket_t packet
-    rk_seed(model.tardis_config.montecarlo.seed, &mt_state)
+    initialize_random_kit(model.tardis_config.montecarlo.seed)
     cdef np.ndarray[double, ndim=1] packet_nus = model.packet_src.packet_nus
     storage.packet_nus = <double*> packet_nus.data
     cdef np.ndarray[double, ndim=1] packet_mus = model.packet_src.packet_mus
@@ -294,8 +281,7 @@ def montecarlo_radial1d(model, int_type_t virtual_packet_flag=0):
     cdef np.ndarray[double, ndim=1] bound_free_th_frequency = model.plasma_array.bound_free_th_frequency
     storage.bound_free_th_frequency = <double*> bound_free_th_frequency.data
 
-
-
+    print("Setting up the storage is complete")
 
     ######## Setting up the output ########
     #cdef np.ndarray[double, ndim=1] output_nus = np.zeros(storage.no_of_packets, dtype=np.float64)

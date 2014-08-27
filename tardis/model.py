@@ -349,6 +349,8 @@ class Radial1DModel(object):
             or np.any(np.isneginf(self.plasma_array.tau_sobolevs.values)):
             raise ValueError('Some tau_sobolevs are nan, inf, -inf in tau_sobolevs. Something went wrong!')
 
+        print(repr(self.packet_src.packet_energies.data))
+
         self.j_blue_estimators = np.zeros((len(self.t_rads), len(self.atom_data.lines)))
         self.montecarlo_virtual_luminosity = np.zeros_like(self.spectrum.frequency.value)
 
