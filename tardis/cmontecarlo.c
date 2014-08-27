@@ -725,7 +725,7 @@ inline montecarlo_event_handler_t get_r_event_handler(rpacket_t * packet,
 	}
 	return handler;
 }
-
+/*
 inline montecarlo_event_handler_t get_event_handler(rpacket_t * packet,
 						    storage_model_t * storage,
 						    double *distance)
@@ -741,7 +741,7 @@ inline montecarlo_event_handler_t get_event_handler(rpacket_t * packet,
 	return handler;
 //ToDo: add the new event handler for the different packet types
 }
-
+*/
 int64_t montecarlo_one_packet_loop(storage_model_t * storage,
 				   rpacket_t * packet, int64_t virtual_packet)
 {
@@ -763,10 +763,9 @@ int64_t montecarlo_one_packet_loop(storage_model_t * storage,
 					    [rpacket_get_next_line_id(packet)]);
 		}
 		double distance;
-		get_r_event_handler(packet, storage, &distance) (packet,
-								 storage,
-								 distance);
-		if (virtual_packet > 0 && rpacket_get_tau_event(packet) > 10.0) {
+      get_r_event_handler(packet, storage, &distance)(packet, storage, distance);
+      if (virtual_packet > 0 && rpacket_get_tau_event(packet) > 10.0)
+	{
 			rpacket_set_tau_event(packet, 100.0);
 			rpacket_set_status(packet,
 					   TARDIS_PACKET_STATUS_EMITTED);
