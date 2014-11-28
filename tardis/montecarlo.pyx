@@ -3,13 +3,9 @@
 # cython: wraparound=False
 # cython: cdivision=True
 
-
-import logging
-import time
-
 import numpy as np
 cimport numpy as np
-from astropy import constants
+from libc.stdlib cimport malloc, free
 
 np.import_array()
 
@@ -69,7 +65,6 @@ cdef extern from "cmontecarlo.h":
         double Cr_ff_max
         double Cr_bb_max
         double Cr_ion_max
-
 
     ctypedef struct storage_model_t:
         double *packet_nus
@@ -189,8 +184,6 @@ cdef extern from "cmontecarlo.h":
     double rpacket_get_energy(rpacket_t *packet)
     void initialize_random_kit(unsigned long seed)
 
-    void free(void*ptr)
-    void* malloc(size_t size)
 
 
 
@@ -296,9 +289,12 @@ def montecarlo_radial1d(model, int_type_t virtual_packet_flag=0):
     cdef np.ndarray[double, ndim=1] output_energies = np.zeros(storage.no_of_packets, dtype=np.float64)
     storage.output_nus = <double*> output_nus.data
     storage.output_energies = <double*> output_energies.data
-    cdef np.ndarray[int_type_t, ndim=1] last_line_interaction_in_id = -1 * np.ones(storage.no_of_packets, dtype=np.int64)
-    cdef np.ndarray[int_type_t, ndim=1] last_line_interaction_out_id = -1 * np.ones(storage.no_of_packets, dtype=np.int64)
-    cdef np.ndarray[int_type_t, ndim=1] last_line_interaction_shell_id = -1 * np.ones(storage.no_of_packets, dtype=np.int64)
+    cdef np.ndarray[int_type_t, ndim=1] last_line_interaction_in_id = -1 * np.ones(storage.no_of_packets,
+                                                                                   dtype=np.int64)
+    cdef np.ndarray[int_type_t, ndim=1] last_line_interaction_out_id = -1 * np.ones(storage.no_of_packets,
+                                                                                    dtype=np.int64)
+    cdef np.ndarray[int_type_t, ndim=1] last_line_interaction_shell_id = -1 * np.ones(storage.no_of_packets,
+                                                                                      dtype=np.int64)
     cdef np.ndarray[int_type_t, ndim=1] last_interaction_type = -1 * np.ones(storage.no_of_packets, dtype=np.int64)
     storage.last_line_interaction_in_id = <int_type_t*> last_line_interaction_in_id.data
     storage.last_line_interaction_out_id = <int_type_t*> last_line_interaction_out_id.data
@@ -310,7 +306,8 @@ def montecarlo_radial1d(model, int_type_t virtual_packet_flag=0):
     storage.nubars = <double*> nubars.data
     storage.spectrum_start_nu = model.tardis_config.spectrum.frequency.value.min()
     storage.spectrum_end_nu = model.tardis_config.spectrum.frequency.value.max()
-    storage.spectrum_delta_nu = model.tardis_config.spectrum.frequency.value[1] - model.tardis_config.spectrum.frequency.value[0]
+    storage.spectrum_delta_nu = model.tardis_config.spectrum.frequency.value[1] - \
+                                model.tardis_config.spectrum.frequency.value[0]
     cdef np.ndarray[double, ndim=1] spectrum_virt_nu = model.montecarlo_virtual_luminosity
     storage.spectrum_virt_nu = <double*> spectrum_virt_nu.data
     storage.sigma_thomson = model.tardis_config.montecarlo.sigma_thomson.to('1/cm^2').value
@@ -318,15 +315,45 @@ def montecarlo_radial1d(model, int_type_t virtual_packet_flag=0):
     storage.reflective_inner_boundary = model.tardis_config.montecarlo.enable_reflective_inner_boundary
     storage.inner_boundary_albedo = model.tardis_config.montecarlo.inner_boundary_albedo
     storage.current_packet_id = -1
+
+    cdef np.ndarray[int_type_t, ndim=2, mode='c'] bf_index_to_level = np.ascontiguousarray(
+        model.plasma_array.chi_bf_index_to_level)
+    storage.chi_bf_index_to_level = <int_type_t*> bf_index_to_level.data
+    storage.chi_bf_index_to_level_nrow = bf_index_to_level.shape[0]
+    storage.chi_bf_index_to_level_ncolum = bf_index_to_level.shape[1]
+
+    cdef np.ndarray[double, ndim=2, mode='c'] bf_level_populations = np.ascontiguousarray(
+        model.plasma_array.bf_level_populations)
+    storage.bf_level_population = <double*> bf_level_populations.data
+    storage.bf_level_population_nrow = bf_level_populations.shape[0]
+    storage.bf_level_population_ncolum = bf_level_populations.shape[1]
+
+    cdef np.ndarray[double, ndim=2, mode='c'] bf_lpopulation_ratio_nlte_lte = np.ascontiguousarray(
+        model.plasma_array.bf_lpopulation_ratio_nlte_lte)
+    storage.bf_lpopulation_ratio_nlte_lte = <double*> bf_lpopulation_ratio_nlte_lte.data
+    storage.bf_lpopulation_ratio_nlte_lte_nrow = bf_lpopulation_ratio_nlte_lte.shape[0]
+    storage.bf_lpopulation_ratio_nlte_lte_ncolum = bf_lpopulation_ratio_nlte_lte.shape[1]
+
+    cdef np.ndarray[double, ndim=1] bf_cross_sections = model.plasma_array.bf_cross_sections
+    storage.bf_cross_sections = <double*> bf_cross_sections.data
+
+    cdef np.ndarray[double, ndim=1] t_electrons = model.plasma_array.t_electrons
+    storage.t_electrons = <double*> t_electrons.data
+
+    cdef np.ndarray[double, ndim=1] bound_free_th_frequency = model.plasma_array.bound_free_th_frequency
+    storage.bound_free_th_frequency = <double*> bound_free_th_frequency.data
+
+    cdef np.ndarray[double, ndim=1, mode='c'] chi_bf_tmp_partial = np.zeros(2 * storage.bf_level_population_nrow, dtype=np.double)
+    storage.chi_bf_tmp_partial = <double *> chi_bf_tmp_partial.data
+
     ######## Setting up the output ########
     #cdef np.ndarray[double, ndim=1] output_nus = np.zeros(storage.no_of_packets, dtype=np.float64)
     #cdef np.ndarray[double, ndim=1] output_energies = np.zeros(storage.no_of_packets, dtype=np.float64)
     cdef int_type_t reabsorbed = 0
 
-    #malloc for the temporary opacity storage. The first column is for the current chi the second for the sum
-    #storage.chi_bf_tmp_partial = <double *> malloc(2 * storage.bf_level_population_nrow *  sizeof(double))
-    storage.chi_bf_tmp_partial = <double *> malloc(100 * sizeof(double)) #This is only to implement the framework
     for packet_index in range(storage.no_of_packets):
+        if not packet_index % (storage.no_of_packets/20):
+            print(packet_index)
         storage.current_packet_id = packet_index
         rpacket_init(&packet, &storage, packet_index, virtual_packet_flag)
         if (virtual_packet_flag > 0):
@@ -335,7 +362,7 @@ def montecarlo_radial1d(model, int_type_t virtual_packet_flag=0):
         #Now can do the propagation of the real packet
         reabsorbed = montecarlo_one_packet(&storage, &packet, 0)
         storage.output_nus[packet_index] = rpacket_get_nu(&packet)
-        storage.output_energies[packet_index] = -rpacket_get_energy(&packet) if reabsorbed == 1 else rpacket_get_energy(&packet)
-    free(storage.chi_bf_tmp_partial)
+        storage.output_energies[packet_index] = -rpacket_get_energy(&packet) if reabsorbed == 1 else rpacket_get_energy(
+            &packet)
     return output_nus, output_energies, js, nubars, last_line_interaction_in_id, last_line_interaction_out_id, last_interaction_type, last_line_interaction_shell_id
 
