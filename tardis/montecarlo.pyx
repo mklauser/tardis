@@ -6,6 +6,7 @@
 import numpy as np
 cimport numpy as np
 from libc.stdlib cimport malloc, free
+from libc.stdio cimport printf
 
 from cython.parallel cimport parallel, prange, threadid
 cimport openmp
@@ -369,8 +370,8 @@ def montecarlo_radial1d(model, int_type_t virtual_packet_flag=0):
         for packet_index in prange(no_of_packets):
             packet = <rpacket_t *> malloc(sizeof(rpacket_t))
             pass
-#            if not packet_index % (storage.no_of_packets/20):
-#                print(packet_index)
+            if not packet_index % (no_of_packets/20):
+                printf("%d\n",packet_index)
             storage.current_packet_id = packet_index
             rpacket_init(packet, &storage, packet_index, virtual_packet_flag)
             if (virtual_packet_flag > 0):
