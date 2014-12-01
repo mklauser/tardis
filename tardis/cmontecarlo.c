@@ -359,24 +359,34 @@ compute_distance2continuum (rpacket_t * packet, storage_model_t * storage)
   else
     {
       // Compute the continuum oddities for a real packet
-      //calculate_chi_bf (packet, storage);
+      #if INCLUDE_BF
+	  calculate_chi_bf(packet, storage);
+	  chi_boundfree = rpacket_get_chi_boundfree(packet);	// For Debug;
+	  #else
+      chi_boundfree = 0.0;
+      rpacket_set_chi_boundfree (packet, chi_boundfree);
+      #endif
+		//chi_boundfree = rpacket_get_chi_boundfree(packet);	// For Debug;
 
-      chi_boundfree = 0.0;	//calculate_chi_bf(packet, storage);
-      //chi_boundfree = rpacket_get_chi_boundfree (packet);	// For Debug;
+
       chi_freefree = 0.0;
       chi_electron = storage->electron_densities[packet->current_shell_id] * storage->sigma_thomson;	// For Debugging set * to /
       chi_continuum = chi_boundfree + chi_freefree + chi_electron;
       d_continuum = rpacket_get_tau_event (packet) / chi_continuum;
 
-//        fprintf(stderr, "--------\n");
-//        fprintf(stderr, "nu = %e \n", rpacket_get_nu(packet));
-//        fprintf(stderr, "chi_electron = %e\n", chi_electron);
-//        fprintf(stderr, "chi_boundfree = %e\n", chi_boundfree);
-//        fprintf(stderr, "chi_line = %e \n", rpacket_get_tau_event(packet) / rpacket_get_d_line(packet));
-//        fprintf(stderr, "--------\n");
+        //fprintf(stderr, "--IN compute_distance2------\n");
+        //fprintf(stderr, "nu = %e \n", rpacket_get_nu(packet));
+        //fprintf(stderr, "chi_electron = %e\n", chi_electron);
+        //fprintf(stderr, "chi_boundfree = %e\n", chi_boundfree);
+        //fprintf(stderr, "chi_continuum = %e\n", chi_continuum);
+        //fprintf(stderr, "chi_line = %e \n", rpacket_get_tau_event(packet) / rpacket_get_d_line(packet));
+        //fprintf(stderr, "--------\n");
 
+    //Update the packet
+    //The chi bound free is set in calculate_chi_bf
       rpacket_set_chi_freefree (packet, chi_freefree);
       rpacket_set_chi_electron (packet, chi_electron);
+      rpacket_set_chi_continuum(packet, chi_continuum);
       rpacket_set_d_continuum (packet, d_continuum);
     }
 }
@@ -451,6 +461,7 @@ calculate_chi_bf (rpacket_t * packet, storage_model_t * storage)
 	      //Save the chi bf partial for this packet;  used later for selecting the bf continuum
 	    }
 	  else
+
 	    {
 	      level_chi = 0;
 	    }
@@ -797,7 +808,10 @@ montecarlo_bound_free_scatter (rpacket_t * packet,
 			       storage_model_t * storage, double distance)
 {
   tardis_error_t error;
-
+  rpacket_set_status( packet,PACKET_IN_PROCESS);
+ // rpacket_set_status( packet, PACKET_STATUS_DISABLED);
+ // rpacket_set_status (packet, TARDIS_PACKET_STATUS_REABSORBED);
+  /*
   double nu;
 //  double nu_bf_edge;
   double nu_edge;
@@ -838,8 +852,7 @@ montecarlo_bound_free_scatter (rpacket_t * packet,
     }
 
   //decide whether we go to ionisation energy
-
-  rpacket_set_status (packet, TARDIS_PACKET_STATUS_REABSORBED);
+*/
 }
 
 //////
@@ -1100,14 +1113,28 @@ montecarlo_continuum_event_handler (rpacket_t *
   normaliz_cont_ff =
     rpacket_get_chi_freefree (packet) / rpacket_get_chi_continuum (packet);
 
+  //fprintf(stderr, "chi_electron = %e\n", rpacket_get_chi_electron (packet));
+  //fprintf(stderr, "chi_boundfree = %e\n",rpacket_get_chi_boundfree (packet));
+  //fprintf(stderr, "--------------------\n");
+  //fprintf(stderr, "chi_continuum = %e\n", rpacket_get_chi_continuum (packet));
+  //fprintf(stderr, "normaliz_cont_th = %f\n", normaliz_cont_th);
+  //fprintf(stderr, "normaliz_cont_bf = %f\n", normaliz_cont_bf);
+  //fprintf(stderr, "zrand = %f\n", zrand);
+  //fprintf(stderr, ">>>>>>>>>>>>>>>>>>>>\n");
+
+
+
+
   if (zrand < normaliz_cont_th)
     {
       //Return the electron scatter event function
+      //fprintf(stderr,"Do thomson scatter\n");
       return &montecarlo_thomson_scatter;
     }
   else if (zrand < (normaliz_cont_th + normaliz_cont_bf))
     {
       //Return the bound-free scatter event function
+      //fprintf(stderr,"Do bound-free scatter\n");
       return &montecarlo_bound_free_scatter;
     }
   else
@@ -1309,11 +1336,11 @@ inline void
 rpacket_set_nu (rpacket_t * packet, double nu)
 {
   packet->nu = nu;
-} inline double
+}
 
+inline double
 rpacket_get_mu (rpacket_t * packet)
 {
-
   return packet->mu;
 }
 
@@ -1321,11 +1348,11 @@ inline void
 rpacket_set_mu (rpacket_t * packet, double mu)
 {
   packet->mu = mu;
-} extern inline double
+}
 
+extern inline double
 rpacket_get_energy (rpacket_t * packet)
 {
-
   return packet->energy;
 }
 
@@ -1333,11 +1360,11 @@ inline void
 rpacket_set_energy (rpacket_t * packet, double energy)
 {
   packet->energy = energy;
-} inline double
+}
 
+inline double
 rpacket_get_r (rpacket_t * packet)
 {
-
   return packet->r;
 }
 
@@ -1349,7 +1376,6 @@ rpacket_set_r (rpacket_t * packet, double r)
 
 rpacket_get_tau_event (rpacket_t * packet)
 {
-
   return packet->tau_event;
 }
 
@@ -1357,11 +1383,10 @@ inline void
 rpacket_set_tau_event (rpacket_t * packet, double tau_event)
 {
   packet->tau_event = tau_event;
-} inline double
-
+}
+inline double
 rpacket_get_nu_line (rpacket_t * packet)
 {
-
   return packet->nu_line;
 }
 
@@ -1369,8 +1394,9 @@ inline void
 rpacket_set_nu_line (rpacket_t * packet, double nu_line)
 {
   packet->nu_line = nu_line;
-} inline unsigned int
+}
 
+inline unsigned int
 rpacket_get_current_shell_id (rpacket_t * packet)
 {
 
@@ -1379,7 +1405,7 @@ rpacket_get_current_shell_id (rpacket_t * packet)
 
 inline double
 storage_get_current_electron_temperature (storage_model_t *
-					  storage, int64_t current_shell_id)
+		            	  storage, int64_t current_shell_id)
 {
   return storage->t_electrons[current_shell_id];
 }
@@ -1407,11 +1433,11 @@ inline void
 rpacket_set_next_line_id (rpacket_t * packet, unsigned int next_line_id)
 {
   packet->next_line_id = next_line_id;
-} inline bool
+}
 
+inline bool
 rpacket_get_last_line (rpacket_t * packet)
 {
-
   return packet->last_line;
 }
 
@@ -1444,11 +1470,11 @@ rpacket_set_recently_crossed_boundary (rpacket_t * packet,
 				       int recently_crossed_boundary)
 {
   packet->recently_crossed_boundary = recently_crossed_boundary;
-} inline int
+}
 
+inline int
 rpacket_get_virtual_packet_flag (rpacket_t * packet)
 {
-
   return packet->virtual_packet_flag;
 }
 
@@ -1468,8 +1494,9 @@ inline void
 rpacket_set_virtual_packet (rpacket_t * packet, int virtual_packet)
 {
   packet->virtual_packet = virtual_packet;
-} inline double
+}
 
+inline double
 rpacket_get_d_boundary (rpacket_t * packet)
 {
 
@@ -1480,11 +1507,11 @@ inline void
 rpacket_set_d_boundary (rpacket_t * packet, double d_boundary)
 {
   packet->d_boundary = d_boundary;
-} inline double
+}
 
+inline double
 rpacket_get_d_line (rpacket_t * packet)
 {
-
   return packet->d_line;
 }
 
@@ -1492,11 +1519,11 @@ inline void
 rpacket_set_d_line (rpacket_t * packet, double d_line)
 {
   packet->d_line = d_line;
-} inline int
+}
 
+inline int
 rpacket_get_next_shell_id (rpacket_t * packet)
 {
-
   return packet->next_shell_id;
 }
 
@@ -1504,11 +1531,11 @@ inline void
 rpacket_set_next_shell_id (rpacket_t * packet, int next_shell_id)
 {
   packet->next_shell_id = next_shell_id;
-} inline double
+}
 
+inline double
 rpacket_get_d_continuum (rpacket_t * packet)
 {
-
   return packet->d_cont;
 }
 
@@ -1534,29 +1561,29 @@ inline void
 rpacket_set_d_continuum (rpacket_t * packet, double d_continuum)
 {
   packet->d_cont = d_continuum;
-} inline void
+}
 
+inline void
 rpacket_set_d_electron (rpacket_t * packet, double d_electron)
 {
-
   packet->d_th = d_electron;
-} inline void
+}
 
+inline void
 rpacket_set_d_freefree (rpacket_t * packet, double d_freefree)
 {
-
   packet->d_ff = d_freefree;
-} inline void
+}
 
+inline void
 rpacket_set_d_boundfree (rpacket_t * packet, double d_boundfree)
 {
-
   packet->d_bf = d_boundfree;
-} inline double
+}
 
+inline double
 rpacket_get_chi_continuum (rpacket_t * packet)
 {
-
   return packet->chi_cont;
 }
 
@@ -1582,28 +1609,30 @@ inline void
 rpacket_set_chi_continuum (rpacket_t * packet, double chi_continuum)
 {
   packet->chi_cont = chi_continuum;
-} inline void
+}
 
+inline void
 rpacket_set_chi_electron (rpacket_t * packet, double chi_electron)
 {
-
   packet->chi_th = chi_electron;
-} inline void
+}
 
+inline void
 rpacket_set_chi_freefree (rpacket_t * packet, double chi_freefree)
 {
 
   packet->chi_ff = chi_freefree;
-} inline void
+}
 
+inline void
 rpacket_set_chi_boundfree (rpacket_t * packet, double chi_boundfree)
 {
   packet->chi_bf = chi_boundfree;
-} inline rpacket_status_t
+}
 
+inline rpacket_status_t
 rpacket_get_status (rpacket_t * packet)
 {
-
   return packet->status;
 }
 
@@ -1675,11 +1704,11 @@ inline void
 rpacket_set_comov_nu (rpacket_t * packet, double comov_nu)
 {
   packet->comov_nu = comov_nu;
-} inline double
+}
 
+inline double
 rpacket_get_comov_nu (rpacket_t * packet)
 {
-
   return packet->comov_nu;
 }
 
