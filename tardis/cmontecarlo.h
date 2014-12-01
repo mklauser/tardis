@@ -1,6 +1,8 @@
 #ifndef TARDIS_CMONTECARLO_H
 #define TARDIS_CMONTECARLO_H
 
+#define INCLUDE_BF 1 //Use the bound-free in MC
+
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdint.h>

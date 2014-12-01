@@ -7,6 +7,13 @@ import numpy as np
 cimport numpy as np
 from libc.stdlib cimport malloc, free
 
+from cython.parallel cimport parallel, prange, threadid
+cimport openmp
+
+cdef int num_threads
+openmp.omp_set_dynamic(1)
+
+
 np.import_array()
 
 ctypedef np.int64_t int_type_t
@@ -176,12 +183,13 @@ cdef extern from "cmontecarlo.h":
 
         int_type_t *Cr_ion_ijk_index
 
+    double rpacket_get_nu(rpacket_t *packet) nogil
+    double rpacket_get_energy(rpacket_t *packet) nogil
+
     #double kB
 
-    int_type_t montecarlo_one_packet(storage_model_t *storage, rpacket_t *packet, int_type_t virtual_mode)
-    int rpacket_init(rpacket_t *packet, storage_model_t *storage, int packet_index, int virtual_packet_flag)
-    double rpacket_get_nu(rpacket_t *packet)
-    double rpacket_get_energy(rpacket_t *packet)
+    int_type_t montecarlo_one_packet(storage_model_t *storage, rpacket_t *packet, int_type_t virtual_mode) nogil
+    int rpacket_init(rpacket_t *packet, storage_model_t *storage, int packet_index, int virtual_packet_flag) nogil
     void initialize_random_kit(unsigned long seed)
 
 
@@ -217,7 +225,7 @@ def montecarlo_radial1d(model, int_type_t virtual_packet_flag=0):
     """
     print("Start montecarlo_radial1d")
     cdef storage_model_t storage
-    cdef rpacket_t packet
+    cdef rpacket_t* packet
     initialize_random_kit(model.tardis_config.montecarlo.seed)
     cdef np.ndarray[double, ndim=1] packet_nus = model.packet_src.packet_nus
     storage.packet_nus = <double*> packet_nus.data
@@ -350,19 +358,32 @@ def montecarlo_radial1d(model, int_type_t virtual_packet_flag=0):
     #cdef np.ndarray[double, ndim=1] output_nus = np.zeros(storage.no_of_packets, dtype=np.float64)
     #cdef np.ndarray[double, ndim=1] output_energies = np.zeros(storage.no_of_packets, dtype=np.float64)
     cdef int_type_t reabsorbed = 0
+    cdef int_type_t no_of_packets = storage.no_of_packets
+    cdef int_type_t packet_index = 0
+    cdef int_type_t num_threads
 
-    for packet_index in range(storage.no_of_packets):
-        if not packet_index % (storage.no_of_packets/20):
-            print(packet_index)
-        storage.current_packet_id = packet_index
-        rpacket_init(&packet, &storage, packet_index, virtual_packet_flag)
-        if (virtual_packet_flag > 0):
-            #this is a run for which we want the virtual packet spectrum. So first thing we need to do is spawn virtual packets to track the input packet
-            reabsorbed = montecarlo_one_packet(&storage, &packet, -1)
-        #Now can do the propagation of the real packet
-        reabsorbed = montecarlo_one_packet(&storage, &packet, 0)
-        storage.output_nus[packet_index] = rpacket_get_nu(&packet)
-        storage.output_energies[packet_index] = -rpacket_get_energy(&packet) if reabsorbed == 1 else rpacket_get_energy(
-            &packet)
+
+
+    with nogil, parallel():
+        num_threads = openmp.omp_get_num_threads()
+        for packet_index in prange(no_of_packets):
+            packet = <rpacket_t *> malloc(sizeof(rpacket_t))
+            pass
+#            if not packet_index % (storage.no_of_packets/20):
+#                print(packet_index)
+            storage.current_packet_id = packet_index
+            rpacket_init(packet, &storage, packet_index, virtual_packet_flag)
+            if (virtual_packet_flag > 0):
+                #this is a run for which we want the virtual packet spectrum. So first thing we need to do is spawn virtual packets to track the input packet
+                reabsorbed = montecarlo_one_packet(&storage, packet, -1)
+            #Now can do the propagation of the real packet
+            reabsorbed = montecarlo_one_packet(&storage, packet, 0)
+            storage.output_nus[packet_index] = rpacket_get_nu(packet)
+            if reabsorbed ==1 :
+                storage.output_energies[packet_index] = -rpacket_get_energy(packet)
+            else:
+                storage.output_energies[packet_index] = rpacket_get_energy(packet)
+            free(packet)
+
     return output_nus, output_energies, js, nubars, last_line_interaction_in_id, last_line_interaction_out_id, last_interaction_type, last_line_interaction_shell_id
 
