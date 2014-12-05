@@ -78,6 +78,7 @@ binary_search (double *x, double x_insert, int64_t imin,
 	       int64_t imax, int64_t * result)
 {
   /*
+    For the upper bound (right range). Get the index in a sorted array where the value is smaller or equal.
      Have in mind that *x points to a sorted array.
      Like [1,2,3,4,5,...]
    */
@@ -89,31 +90,19 @@ binary_search (double *x, double x_insert, int64_t imin,
     }
   else
     {
-      while (imax >= imin)
+      while (imin <= imax)
 	{
-	  imid = (imin + imax) / 2;
-	  if (x[imid] == x_insert)
-	    {
-	      *result = imid;
-	      break;
-	    }
-	  else if (x[imid] < x_insert)
-	    {
-	      imin = imid + 1;
-	    }
+	  imid = imin + (imax - imin) / 2;
+	  if (x[imid] > x_insert)
+	  {
+	    imax = imid - 1;
+	  }
 	  else
-	    {
-	      imax = imid - 1;
-	    }
-	}
-      if (imax - imid == 2 && x_insert < x[imin + 1])
-	{
-	  *result = imin;
-	}
-      else
-	{
-	  *result = imin;
-	}
+	  {
+	    imin = imid + 1;
+	  }
+    }
+     *result = imin - 1;
     }
   return ret_val;
 }
