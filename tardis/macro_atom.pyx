@@ -7,6 +7,7 @@
 
 import numpy as np
 
+from cython.view cimport array as cvarray
 cimport numpy as np
 
 ctypedef np.int64_t int_type_t
@@ -71,3 +72,39 @@ def normalize_transition_probabilities(double [:, :] p_transition,
                     continue
 
                 p_transition[j,k] /= norm_factor[k]
+
+
+cpdef calculate_collisional_deexcitation_rate( int number_of_shells,
+                                            double [:] electron_densities,
+                                            double [:,:,:] interpolated_collision_a,
+                                            double [:] wavelength_cm,
+                                            double [:,:] level_populations_lte,
+                                            double [:,:,:] collisional_deexcitation_rates
+                                            ) nogil:
+    """
+    Returns the calculate collisional deexcitation rate for the macroatom
+    @param electron_densities: 1-d array like data storing the electron densities for each shell
+    @param interpolated_collision_a: 2-d array like data storing the interpolated_collision_a for each shell, start-level, and end-level
+    @param wavelength_cm: 1-d array like data storing the wavelength in cm for each level
+    @param level_populations_lte: 2-d array like data storing the level populations in lte for each shell and level
+    @return: collisional deexcitation rates: 3-d array like data storing for each shell, start level, and end level.
+    We use the pointer to collisional_deexcitation_rates for return
+    """
+    cdef int  sl, el, nl , s, ns # sl start-level; el end-level; nl number of levels; s shell; ns number of shells;
+    cdef double db # detailed balance factor for nlte inversion
+    ns = number_of_shells
+    nl = len(level_populations_lte)
+
+    for s in range(ns):
+        #over all shell
+
+        for sl in range(nl):
+            for el in range(nl):
+                #over all levels
+                db = (level_populations_lte[s,sl] / level_populations_lte[s,el])
+                collisional_deexcitation_rates[s,sl,el] = db * electron_densities[s] * interpolated_collision_a[s, sl, el] *  h_cgs * c / wavelength_cm[sl]
+
+
+
+
+
