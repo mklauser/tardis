@@ -873,8 +873,9 @@ class BasePlasmaArray(object):
 
             #To C_ff
             #Cr_{fb} = C_0 * T^{\frac{1/2}} * n_e * N_{j,k} * q_{j,k} **2 // Michi MA
-            Cr_ff_jk_all[i] = C_ff_coefficent * Te[i] **(0.5) *self.electron_densities[i] * continuums_pop[i] * continuums_pop[1].reset_index()['ion_number']**2
-            Cr_ff_jk_cumsum_all[i] = np.cumsum((Cr_ff_jk_all))
+            ipdb.set_trace()
+            Cr_ff_jk_all[i] = C_ff_coefficent * Te[i] **(0.5) *self.electron_densities[i] * continuums_pop[i].__array__() * continuums_pop[1].reset_index()['ion_number'].__array__()**2
+            Cr_ff_jk_cumsum_all[i] = np.cumsum((Cr_ff_jk_all).__array__())
 
 
 
@@ -893,12 +894,14 @@ class BasePlasmaArray(object):
             #To C_exc in the  Regemorter approximation
             interpolated_collision = get_interpolated_collision_r(collision_data, collision_data_temperatures,
                                                                     Te[i])
+            ipdb.set_trace()
             lines_data = self.atom_data.lines.copy()
             lines_data.set_index(['atomic_number', 'ion_number', 'level_number_lower', 'level_number_upper'], inplace = True)
             lines_data_a, interpolated_collision_a = lines_data.align(interpolated_collision, axis=0, join='inner')
             Cr_bb_ijk_all_tmp = self.electron_densities[i] * interpolated_collision_a['interpolated_collision'] * h_cgs * c_cgs / lines_data_a['wavelength_cm']
             Cr_bb_ijk_all[i] =  Cr_bb_ijk_all_tmp.__array__()
             Cr_bb_ijk_cumsum_all[i] = np.cumsum(Cr_bb_ijk_all[i])
+            ipdb.set_trace()
             #cr_bb_kij_all[i] = self.electron_densities[i] * get_interpolated_collision_r(collision_data,
             #                                                                             collision_data_temperatures,
             #                                                                             Te[i])['interpolated_collision']
@@ -952,6 +955,16 @@ class BasePlasmaArray(object):
 
 
 
+    def calculate_collisional_recombination_rate(self):
+        """
+        Returns the calculate collisional recombination rate computed from the collisional ionization rates. 
+
+        ... math:: n_{j+1,k} C_{j+,k \rightarrow  i,j,k} = n_{j+1,k} \left(\frac{n_{i,j,k}}{n_{j+1,k}}
+        """
+        ns = len(self.t_electrons) # number of shells
+
+        for s in range(ns):
+            pass
 
 
 
