@@ -78,7 +78,7 @@ cpdef calculate_collisional_deexcitation_rate( int number_of_shells,
                                             double [:] electron_densities,
                                             double [:,:,:] interpolated_collision_a,
                                             double [:] wavelength_cm,
-                                            double [:,:] level_populations_lte,
+                                            double [:,:] detailed_balance
                                             double [:,:,:] collisional_deexcitation_rates
                                             ) nogil:
     """
@@ -91,9 +91,10 @@ cpdef calculate_collisional_deexcitation_rate( int number_of_shells,
     We use the pointer to collisional_deexcitation_rates for return
     """
     cdef int  sl, el, nl , s, ns # sl start-level; el end-level; nl number of levels; s shell; ns number of shells;
-    cdef double db # detailed balance factor for nlte inversion
+    cdef double [:,:] db # detailed balance factor for nlte inversion
     ns = number_of_shells
     nl = len(level_populations_lte)
+    db = detailed_balance
 
     for s in range(ns):
         #over all shell
@@ -101,8 +102,7 @@ cpdef calculate_collisional_deexcitation_rate( int number_of_shells,
         for sl in range(nl):
             for el in range(nl):
                 #over all levels
-                db = (level_populations_lte[s,sl] / level_populations_lte[s,el])
-                collisional_deexcitation_rates[s,sl,el] = db * electron_densities[s] * interpolated_collision_a[s, sl, el] *  h_cgs * c / wavelength_cm[sl]
+                collisional_deexcitation_rates[s,sl,el] = db[s] * electron_densities[s] * interpolated_collision_a[s, sl, el] *  h_cgs * c / wavelength_cm[sl]
 
 cpdef calculate_collisional_recombination_rate( int number_of_shells,
                                                 double [:,:] level_populations_lte,

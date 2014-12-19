@@ -832,7 +832,7 @@ class BasePlasmaArray(object):
         #create the gi value array for the Seaton approximation
         gi = np.zeros((len(self.level_populations)))
         _mask = self.level_populations.reset_index()['ion_number'].__array__() == 0
-        gi[_mask] = 0.1
+        #gi[_mask] = 0.1
         _mask = self.level_populations.reset_index()['ion_number'].__array__() == 1
         gi[_mask] = 0.2
         _mask = self.level_populations.reset_index()['ion_number'].__array__() >= 2
@@ -953,19 +953,135 @@ class BasePlasmaArray(object):
 
         a = 1
 
+    def calculate_collisional_deexcitation_rate(self):
+        """
+        Returns the collisional deexcitation rates computed in macroatom.calculate_collisional_deexcitation_rate
+        """
+        ns = len(self.t_electrons)
+        nl = len(self._get_population_ratio()[0])
+        es = self.electron_densities
+        db = self._get_population_ratio()
+        icoll,  = self._get_interpolated_collision_data()#interpolated collision data
+        ldata = self.atom_data.lines.copy()
+        ldataa, icolla = ldata.align(icoll, axis=0, join='inner')
+        colldeex = np.zeros((ns, nl, nl))
+
+        macro_atom.calculate_collisional_deexcitation_rate(ns,
+                                                           es,
+                                                           icolla,
+                                                           db,
+                                                           colldeex
+                                                           )
+
+        return colldeex
+
+    
+    def calculate_collisional_ionization_rate(self):
+        """
+        Returns the calculate collisional ionization rate. The is computed following Eq. 5-79  Mihalas 1978 
+
+        ... math::  
+            
+                    c_{i,j,k \\rightarrow  j+1,k} = n_e 1.55 \\times 10^{13} T_{e}^{-0.5} g_i \\sigma_{i,j,k \\rightarrow  j+1,k}(\\nu_{i,j,k}) \\frac{1}{h \\nu / k_b /T } e^{- \\frac{1}{h \\nu / k_b /T }} 
+        
+        """
+        ns = len(self.t_electrons) # number of shells
+        nl = len(self._get_population_ratio()[0])
+        roh_e = self.electron_densities
+        Te = self.t_electrons
+        nu_bf = self._get_bound_free_th_frequency()
+        gi = self._get_gi_factors()
+        cx = self._get_bound_free_cross_section()['cross_section'].__array__()
+
+        final = np.zeros((ns, nl))
+
+        for s in range(ns):
+            ci = roh_e[s] * 1.55e13 * gi * cx / h_cgs / nu_bf * k_B_cgs * Te[s]**(0.5) * np.exp(- h_cgs * nu_bf / k_B_cgs / Te[s])
+            nans = np.isnan(ci)
+            ci[nans] = 0
+            final[s, :] = ci
+        return final
 
 
     def calculate_collisional_recombination_rate(self):
         """
-        Returns the calculate collisional recombination rate computed from the collisional ionization rates. 
+        Returns the calculate collisional recombination rate computed from the
+        collisional ionization rates. The is computed following Eq. 5-79  Mihalas 1978 
 
-        ... math:: n_{j+1,k} C_{j+,k \rightarrow  i,j,k} = n_{j+1,k} \left(\frac{n_{i,j,k}}{n_{j+1,k}}
+        ... math::  
+        
+                    n_{j+1,k} C_{j+1,k \rightarrow  i,j,k} = n_{j+1,k}
+                    \left(\frac{n_{i,j,k}}{n_{j+1,k}}\\right)^{*} 
+                    C_{i,j,k \rightarrow  j+1,k}
         """
-        ns = len(self.t_electrons) # number of shells
+
+        ns = len(self.t_electrons)# number of shells
+        nl = len(self._get_population_ratio()[0])
+        db = self._get_population_ratio()
+        ci = self.calculate_collisional_ionization_rate()
+
+        final = np.zeros((ns, nl))
 
         for s in range(ns):
-            pass
+            cr = db[s] * ci[s]
+            nans = np.isnan(cr)
+            cr[nans] = 0
+            final[s, :] = cr
 
+        return final
+
+
+    def _get_interpolated_collision_data(self):
+        """
+        Returns the interpolate the collision data in the temperature space.
+
+        """
+
+        collision_data = self.atom_data.collision_data_temperatures
+        collision_data_temperatures = self.atom_data.collision_data_temperatures
+        current_T = self.t_electrons
+
+        def interp(fp, xp, x):
+            """
+            wrapper function to change the argument order of interp
+            """
+            return np.interp(x, xp, fp)
+
+
+        interpolated_collision = np.apply_along_axis(interp, 1, collision_data.values[:, 1:],collision_data_temperatures, current_T)
+        data = pd.DataFrame(np.zeros(len(collision_data)))
+        data.index = collision_data.index
+        data['interpolated_collision'] = interpolated_collision
+        return data
+        
+
+ 
+
+    def _get_bound_free_cross_section(self):
+        """Reshape the cross_section ot match the atom_data.levels.
+        :returns: np.array like the atom_data.levels containing the bound free cross-sections. 
+
+        """
+        cr = pd.concat([self.atom_data.levels,self.atom_data.ion_cx_th], axis=1)
+        cr['cross_section'] = cr['cross_section'].fillna(0)
+
+        return cr
+
+
+    def _get_gi_factors(self):
+        """Get the gi value array for the Seaton approximation
+        :returns: np.array like the level populations
+
+        """
+        gi = np.zeros((len(self.level_populations)))
+        mask = self.level_populations.reset_index()['ion_number'].__array__() == 0
+        gi[mask] = 0.1
+        mask = self.level_populations.reset_index()['ion_number'].__array__() == 1
+        gi[mask] = 0.2
+        mask = self.level_populations.reset_index()['ion_number'].__array__() >= 2
+        gi[mask] = 0.3
+
+        return gi
 
 
 
@@ -991,7 +1107,7 @@ class BasePlasmaArray(object):
     def _get_level_population_lte(self, bf_dataf):
 
         _level_g_ratio = self.atom_data.levels.g.values[np.newaxis].T * np.exp(
-        np.outer(bf_dataf.energy.values, -self.beta_rads))
+                         np.outer(bf_dataf.energy.values, -self.beta_rads))
 
 
         _level_population_proportionalities = pd.DataFrame(_level_g_ratio, index=self.atom_data.levels.index,
