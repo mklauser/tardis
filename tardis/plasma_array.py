@@ -1030,6 +1030,24 @@ class BasePlasmaArray(object):
 
         return final
 
+    def calculate_radiative_recombination_rate(self):
+        pass
+
+    def calculate_radiative_deexcitation_rate(self):
+        pass
+
+    def calculate_internal_jump_down(self):
+        pass
+
+    def calculate_internal_jump_up(self):
+        pass
+
+    def calculate_internal_jump_to_higher_ion(self):
+        pass
+
+    def calculate_internal_jump_to_lower_ion(self):
+        pass
+
 
     def _get_interpolated_collision_data(self):
         """
