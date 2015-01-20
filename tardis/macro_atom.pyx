@@ -78,7 +78,7 @@ cpdef calculate_collisional_deexcitation_rate( int number_of_shells,
                                             double [:] electron_densities,
                                             double [:,:,:] interpolated_collision_a,
                                             double [:] wavelength_cm,
-                                            double [:,:] detailed_balance
+                                            double [:,:] detailed_balance,
                                             double [:,:,:] collisional_deexcitation_rates
                                             ) nogil:
     """
@@ -93,7 +93,7 @@ cpdef calculate_collisional_deexcitation_rate( int number_of_shells,
     cdef int  sl, el, nl , s, ns # sl start-level; el end-level; nl number of levels; s shell; ns number of shells;
     cdef double [:,:] db # detailed balance factor for nlte inversion
     ns = number_of_shells
-    nl = len(level_populations_lte)
+    nl = len(detailed_balance)
     db = detailed_balance
 
     for s in range(ns):
